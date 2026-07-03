@@ -1,0 +1,26 @@
+flowchart TD
+    A[Master File]
+    B[Metadata Engine]
+    C[Excel Adapter]
+    D[Header Mapper]
+    E[Schema Validator]
+    F[Data Source Contract]
+    G[Normalizer]
+    H[Warehouse Builder]
+    I[Business Engine]
+    J[Validation Engine]
+    K[Presentation Engine]
+    L[Export Engine]
+    M[Dashboard]
+
+    A --> B --> C --> D --> E --> F --> G --> H --> I --> J --> K --> L --> M
+
+    subgraph StageDetails
+        direction TB
+        A_input[Input: Uploaded file]
+        A_output[Output: workbook path/handle]
+        B_input[Input: workbook]
+        B_output[Output: metadata]
+        C_input[Input: workbook]
+        C_output[Output: raw rows]
+    end

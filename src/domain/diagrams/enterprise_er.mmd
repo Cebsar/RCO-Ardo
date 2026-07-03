@@ -1,0 +1,15 @@
+%% Mermaid ER diagram for enterprise financial model
+erDiagram
+    COMPANY ||--o{ DIVISION : has
+    COMPANY ||--o{ COST_CENTER : owns
+    DIVISION ||--o{ COST_CENTER : has
+    COMPANY ||--o{ LEDGER : maintains
+    LEDGER ||--o{ ACCOUNT : contains
+    LEDGER ||--o{ JOURNAL : records
+    JOURNAL ||--o{ ACCOUNTING_ENTRY : contains
+    ACCOUNT ||--o{ ACCOUNT : parent_child
+    ACCOUNTING_ENTRY }o--|| ACCOUNT : posts_to
+    ACCOUNTING_ENTRY }o--|| COST_CENTER : posted_to
+    FINANCIAL_STATEMENT ||--|| COMPANY : for
+    FINANCIAL_STATEMENT ||--|| ACCOUNTING_PERIOD : period
+    FINANCIAL_STATEMENT ||--o{ DRE_NODE : roots

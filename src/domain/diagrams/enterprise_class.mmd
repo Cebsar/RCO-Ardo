@@ -1,0 +1,69 @@
+%% Mermaid class diagram for enterprise financial model
+classDiagram
+    class Company {
+        CompanyCode code
+        String name
+        Division[] divisions
+        CostCenter[] cost_centers
+    }
+    class Division {
+        DivisionCode code
+        String name
+        Company company
+    }
+    class CostCenter {
+        CostCenterCode code
+        String name
+    }
+    class Ledger {
+        Company company
+        Account[] accounts
+        Journal[] journals
+    }
+    class Account {
+        AccountCode code
+        String name
+        AccountType type
+        Account parent
+        Account[] children
+    }
+    class Journal {
+        JournalNumber number
+        AccountingPeriod period
+        AccountingEntry[] entries
+    }
+    class AccountingEntry {
+        String id
+        Account account
+        Money amount
+        Date date
+        EntryType entry_type
+    }
+    class AccountingPeriod {
+        String code
+        Date start
+        Date end
+    }
+    class DRENode {
+        AccountCode code
+        String name
+        DRELevel level
+        Money amount
+        DRENode[] children
+    }
+    class FinancialStatement {
+        Company company
+        AccountingPeriod period
+        DRENode dre_root
+    }
+
+    Company "1" o-- "*" Division
+    Company "1" o-- "*" CostCenter
+    Company "1" o-- "1" Ledger
+    Ledger "1" o-- "*" Account
+    Ledger "1" o-- "*" Journal
+    Journal "1" o-- "*" AccountingEntry
+    Account "1" o-- "*" Account : parent_child
+    FinancialStatement "1" o-- "1" Company
+    FinancialStatement "1" o-- "1" AccountingPeriod
+    FinancialStatement "1" o-- "*" DRENode

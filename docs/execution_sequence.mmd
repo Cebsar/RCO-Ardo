@@ -1,0 +1,41 @@
+sequenceDiagram
+    participant User
+    participant System
+    participant MetadataEngine
+    participant ExcelAdapter
+    participant HeaderMapper
+    participant SchemaValidator
+    participant Contract
+    participant Normalizer
+    participant WarehouseBuilder
+    participant BusinessEngine
+    participant ValidationEngine
+    participant PresentationEngine
+    participant ExportEngine
+    participant Dashboard
+
+    User->>System: Upload Master File
+    System->>MetadataEngine: Extract metadata
+    MetadataEngine-->>System: Metadata
+    System->>ExcelAdapter: Load workbook
+    ExcelAdapter-->>System: Raw rows
+    System->>HeaderMapper: Map headers
+    HeaderMapper-->>System: Normalized headers
+    System->>SchemaValidator: Validate schema
+    SchemaValidator-->>System: Validation report
+    System->>Contract: Enforce data contract
+    Contract-->>System: Contract-conformant rows
+    System->>Normalizer: Normalize values
+    Normalizer-->>System: Canonical rows
+    System->>WarehouseBuilder: Store snapshot
+    WarehouseBuilder-->>System: Snapshot path
+    System->>BusinessEngine: Run business calculations
+    BusinessEngine-->>System: Derived artifacts
+    System->>ValidationEngine: Run validations
+    ValidationEngine-->>System: Validation report
+    System->>PresentationEngine: Prepare presentation datasets
+    PresentationEngine-->>System: Presentation datasets
+    System->>ExportEngine: Export files/APIs
+    ExportEngine-->>System: Export results
+    System->>Dashboard: Update dashboards
+    Dashboard-->>User: Visualizations

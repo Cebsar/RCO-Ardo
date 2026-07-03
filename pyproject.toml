@@ -1,0 +1,33 @@
+[project]
+name = "ardo-financial-analytics"
+version = "0.1.0"
+description = "ARDO Financial Analytics"
+authors = ["César Barreto"]
+requires-python = ">=3.14,<4"
+dependencies = [
+	"pandas>=1.5",
+	"numpy>=1.24",
+	"pyyaml>=6.0",
+	"sqlalchemy>=2.0",
+	"fastapi>=0.95",
+	"uvicorn[standard]>=0.20",
+	"pydantic>=2.3",
+	"openpyxl>=3.0",
+]
+[tool.ruff]
+line-length = 88
+target-version = ["py314"]
+
+[tool.black]
+line-length = 88
+target-version = ["py314"]
+
+[tool.isort]
+profile = "black"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q"
+testpaths = ["tests"]
+python_files = "test_*.py"
+

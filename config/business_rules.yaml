@@ -1,0 +1,25 @@
+rules:
+  - id: "REVENUE"
+    node_code: "REVENUE"
+    description: "Revenue recognized from sales accounts"
+    filters:
+      account_code_prefix: "4"
+    expression: "sum([Decimal(f['amount']) for f in facts])"
+    calculated: true
+
+  - id: "COGS"
+    node_code: "COGS"
+    description: "Cost of goods sold using purchase accounts"
+    filters:
+      account_code_prefix: "5"
+    expression: "sum([Decimal(f['amount']) for f in facts])"
+    calculated: true
+
+  - id: "GROSS_MARGIN"
+    node_code: "GROSS_MARGIN"
+    description: "Gross margin calculated from Revenue and COGS"
+    expression: "children[0] - children[1]"
+    calculated: true
+    children:
+      - "REVENUE"
+      - "COGS"
