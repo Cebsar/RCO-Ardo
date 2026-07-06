@@ -1,0 +1,20 @@
+flowchart LR
+    User[Enterprise User or Internal Service]
+    Browser[Browser / API Client]
+    Compose[Docker Compose]
+    API[FastAPI Container]
+    Swagger[Swagger /docs]
+    Health[Healthcheck /health]
+    Alembic[Alembic Migrations]
+    DB[(enterprise_database volume\n/app/database/enterprise.db)]
+    Env[Environment Variables\n.env]
+
+    User --> Browser
+    Browser -->|HTTP :8000| API
+    Compose --> API
+    Env --> API
+    API --> Swagger
+    API --> Health
+    API --> Alembic
+    Alembic --> DB
+    API --> DB

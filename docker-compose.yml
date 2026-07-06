@@ -1,0 +1,34 @@
+services:
+  enterprise-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ardo-enterprise-api:latest
+    container_name: ardo-enterprise-api
+    env_file:
+      - .env
+    environment:
+      ENTERPRISE_DATABASE_URL: ${ENTERPRISE_DATABASE_URL:-sqlite:////app/database/enterprise.db}
+      API_SECRET_KEY: ${API_SECRET_KEY:?API_SECRET_KEY is required}
+      API_AUTH_USERS: ${API_AUTH_USERS:-}
+      API_INTERNAL_API_KEYS: ${API_INTERNAL_API_KEYS:-}
+      API_CORS_ALLOW_ORIGINS: ${API_CORS_ALLOW_ORIGINS:-http://localhost:3000}
+      API_CORS_ALLOW_CREDENTIALS: ${API_CORS_ALLOW_CREDENTIALS:-true}
+      API_CORS_ALLOW_METHODS: ${API_CORS_ALLOW_METHODS:-GET,POST,OPTIONS}
+      API_CORS_ALLOW_HEADERS: ${API_CORS_ALLOW_HEADERS:-Authorization,Content-Type,X-API-Key,X-Request-ID}
+      PORT: ${PORT:-8000}
+    ports:
+      - "${PORT:-8000}:8000"
+    volumes:
+      - enterprise_database:/app/database
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  enterprise_database:
+    name: ardo_enterprise_database
