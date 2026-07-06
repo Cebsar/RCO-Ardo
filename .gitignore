@@ -11,6 +11,7 @@ logs/
 .mypy_cache/
 .coverage
 htmlcov/
+*.tsbuildinfo
 
 # Generated runtime data and reports
 database/*.db
@@ -26,3 +27,13 @@ data/
 *.csv
 *.pdf
 *.json
+
+# Frontend source and package metadata are not generated artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/vite.config.js
+frontend/vite.config.d.ts
+!frontend/package.json
+!frontend/package-lock.json
+!frontend/tsconfig*.json
+!frontend/components.json
