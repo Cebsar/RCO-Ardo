@@ -2,11 +2,15 @@ from __future__ import annotations
 
 from fastapi import HTTPException, status
 
+from api.metadata import API_VERSION
 from api.repositories.pipeline import PipelineRepository
+from api.schemas.common import response_meta
 from api.schemas.pipeline import (
+    PipelineExecutionAPIResponse,
     PipelineExecutionDetail,
     PipelineExecutionResponse,
     PipelineExecutionSummary,
+    PipelineHistoryAPIResponse,
     PipelineHistoryResponse,
 )
 
@@ -15,11 +19,14 @@ class PipelineService:
     def __init__(self, repository: PipelineRepository):
         self.repository = repository
 
-    def history(self, limit: int = 50) -> PipelineHistoryResponse:
+    def history(self, limit: int = 50) -> PipelineHistoryAPIResponse:
         executions = [self._summary(row) for row in self.repository.list_history(limit=limit)]
-        return PipelineHistoryResponse(executions=executions)
+        return PipelineHistoryAPIResponse(
+            data=PipelineHistoryResponse(executions=executions),
+            meta=response_meta(API_VERSION),
+        )
 
-    def get_execution(self, execution_id: str) -> PipelineExecutionResponse:
+    def get_execution(self, execution_id: str) -> PipelineExecutionAPIResponse:
         execution = self.repository.get(execution_id)
         if execution is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pipeline execution not found")
@@ -32,7 +39,10 @@ class PipelineService:
             reconciliation_rows=self.repository.count_reconciliation_rows(execution.id),
             metrics_rows=self.repository.count_metrics(execution.id),
         )
-        return PipelineExecutionResponse(execution=detail)
+        return PipelineExecutionAPIResponse(
+            data=PipelineExecutionResponse(execution=detail),
+            meta=response_meta(API_VERSION),
+        )
 
     def _summary(self, row) -> PipelineExecutionSummary:
         return PipelineExecutionSummary(

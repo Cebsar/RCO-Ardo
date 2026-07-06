@@ -15,6 +15,7 @@ dependencies = [
 	"pydantic>=2.3",
 	"openpyxl>=3.0",
 	"httpx2>=0.28",
+	"python-multipart>=0.0.9",
 ]
 [tool.ruff]
 line-length = 88

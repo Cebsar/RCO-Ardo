@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+from api.metadata import API_VERSION
 from api.repositories.financial import FinancialRepository
-from api.schemas.financial import DREFilter, DRERow, DRETreeResponse
+from api.schemas.common import response_meta
+from api.schemas.financial import DREFilter, DRERow, DRETreeAPIResponse, DRETreeResponse
 
 
 class FinancialService:
     def __init__(self, repository: FinancialRepository):
         self.repository = repository
 
-    def dre(self, *, company: str | None = None, period: str | None = None) -> DRETreeResponse:
+    def dre(self, *, company: str | None = None, period: str | None = None) -> DRETreeAPIResponse:
         nodes = [
             DRERow(
                 node_code=row.node_code,
@@ -24,4 +26,7 @@ class FinancialService:
             )
             for row in self.repository.list_dre_nodes(company=company, period=period)
         ]
-        return DRETreeResponse(filters=DREFilter(company=company, period=period), nodes=nodes)
+        return DRETreeAPIResponse(
+            data=DRETreeResponse(filters=DREFilter(company=company, period=period), nodes=nodes),
+            meta=response_meta(API_VERSION),
+        )

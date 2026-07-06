@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
+import os
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -9,6 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from api.dependencies import get_db_session
 from api.main import create_app
+from api.config import get_security_settings
 from src.infrastructure.persistence.models import (
     Base,
     ExecutionMetricsORM,
@@ -20,6 +22,10 @@ from src.infrastructure.persistence.models import (
 
 
 def build_client(tmp_path) -> TestClient:
+    os.environ["API_SECRET_KEY"] = "integration-secret"
+    os.environ["API_AUTH_USERS"] = "admin:admin"
+    os.environ["API_INTERNAL_API_KEYS"] = "internal-test-key"
+    get_security_settings.cache_clear()
     engine = create_engine(f"sqlite:///{(tmp_path / 'api.db').as_posix()}", future=True)
     Base.metadata.create_all(engine)
     session_factory = sessionmaker(bind=engine, class_=Session, expire_on_commit=False, future=True)
@@ -105,6 +111,16 @@ def build_client(tmp_path) -> TestClient:
     return TestClient(app)
 
 
+def auth_headers(client: TestClient) -> dict[str, str]:
+    response = client.post(
+        "/auth/token",
+        data={"username": "admin", "password": "admin"},
+    )
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
 def test_api_startup_and_system_endpoints(tmp_path):
     client = build_client(tmp_path)
 
@@ -113,28 +129,30 @@ def test_api_startup_and_system_endpoints(tmp_path):
     openapi = client.get("/openapi.json")
 
     assert health.status_code == 200
-    assert health.json() == {"status": "ok", "database": "ok"}
+    assert health.json()["data"] == {"status": "ok", "database": "ok"}
+    assert health.json()["errors"] == []
     assert version.status_code == 200
-    assert version.json()["version"] == "0.2.0"
+    assert version.json()["data"]["version"] == "0.2.0"
     assert openapi.status_code == 200
     assert "/pipeline/history" in openapi.json()["paths"]
 
 
 def test_api_exposes_pipeline_financial_and_analytics_endpoints(tmp_path):
     client = build_client(tmp_path)
+    headers = auth_headers(client)
 
-    history = client.get("/pipeline/history")
-    execution = client.get("/pipeline/exec-1")
-    dre = client.get("/financial/dre/company-a/202606")
-    kpis = client.get("/analytics/kpis")
+    history = client.get("/pipeline/history", headers=headers)
+    execution = client.get("/pipeline/exec-1", headers=headers)
+    dre = client.get("/financial/dre/company-a/202606", headers=headers)
+    kpis = client.get("/analytics/kpis", headers=headers)
 
     assert history.status_code == 200
-    assert history.json()["executions"][0]["id"] == "exec-1"
+    assert history.json()["data"]["executions"][0]["id"] == "exec-1"
     assert execution.status_code == 200
-    assert execution.json()["execution"]["accounting_entries"] == 1
+    assert execution.json()["data"]["execution"]["accounting_entries"] == 1
     assert dre.status_code == 200
-    assert dre.json()["filters"] == {"company": "company-a", "period": "202606"}
-    assert dre.json()["nodes"][0]["node_code"] == "4"
+    assert dre.json()["data"]["filters"] == {"company": "company-a", "period": "202606"}
+    assert dre.json()["data"]["nodes"][0]["node_code"] == "4"
     assert kpis.status_code == 200
-    assert kpis.json()["pipeline_executions"] == 1
-    assert kpis.json()["latest_execution_id"] == "exec-1"
+    assert kpis.json()["data"]["pipeline_executions"] == 1
+    assert kpis.json()["data"]["latest_execution_id"] == "exec-1"
