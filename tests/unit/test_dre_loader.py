@@ -66,6 +66,36 @@ def test_dre_tree_builder_preserves_hierarchy():
     assert root.children[0].name == "Sales"
     assert len(root.children[0].children) == 1
     assert root.children[0].children[0].name == "Online"
+    assert report.tree_validation is not None
+    assert report.tree_validation.is_valid
+    assert report.tree_validation.parent_by_code == {
+        "Revenue": None,
+        "Sales": "Revenue",
+        "Online": "Sales",
+    }
+    assert report.traversal is not None
+    assert report.traversal.traversal_order == ("Revenue", "Sales", "Online")
+    assert report.execution_metrics is not None
+    assert report.execution_metrics.nodes_processed == 3
+    assert report.execution_metrics.max_depth == 3
+
+
+def test_dre_tree_builder_promotes_orphans_deterministically():
+    rows = [
+        {"col_1": "N1", "col_2": "N2", "col_3": "N3", "_row_number": 1},
+        {"col_1": None, "col_2": "Sales", "col_3": None, "_row_number": 2},
+        {"col_1": "Revenue", "col_2": None, "col_3": None, "_row_number": 3},
+    ]
+
+    builder = DRETreeBuilder()
+    tree, report = builder.build_from_rows(rows)
+
+    assert [node.name for node in tree.roots] == ["Sales", "Revenue"]
+    assert report.warnings == ["Row 2 has level 2 without parent; promoting to root"]
+    assert report.tree_validation is not None
+    assert not report.tree_validation.is_valid
+    assert report.traversal is not None
+    assert report.traversal.traversal_order == ("Sales", "Revenue")
 
 
 def test_dre_tree_builder_from_path_reads_source():

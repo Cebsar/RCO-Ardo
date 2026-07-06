@@ -23,8 +23,20 @@ def test_header_mapping_aliases_and_missing():
     assert result.mapping["codigo"] == "AccountCode"
     # debit alias matches Debit
     assert result.mapping["debito"] == "Debit"
-    # missing required fields should include many
-    assert "Credit" in result.missing_required
+    # optional monetary fields are not required by the frozen domain contract
+    assert "Credit" not in result.missing_required
+    assert result.missing_required == []
+
+
+def test_header_mapping_missing_required_uses_domain_contract():
+    headers = ["empresa", "debito"]
+    mapper = HeaderMapper()
+    result = mapper.map(headers)
+
+    assert "AccountCode" in result.missing_required
+    assert "AccountingDate" in result.missing_required
+    assert "Credit" not in result.missing_required
+    assert "Balance" not in result.missing_required
 
 
 def test_header_mapping_duplicates():

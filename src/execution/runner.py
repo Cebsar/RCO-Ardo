@@ -52,6 +52,7 @@ class PipelineRunner:
     golden_dataset_comparator: Optional[GoldenDatasetComparator] = None
     logger: Optional[logging.Logger] = None
     normalizer_factory: Callable[[HeaderMapping], AccountingNormalizer] = AccountingNormalizer
+    enterprise_persistence: Optional[Any] = None
 
     def run(self, config: ExecutionConfiguration) -> PipelineReport:
         context = ExecutionContext(pipeline_name="ARDO Pipeline")
@@ -129,6 +130,7 @@ class PipelineRunner:
         )
 
         self._attach_reports(report, context)
+        self._persist_enterprise_report(report, context)
         return report
 
     def _attach_reports(self, report: PipelineReport, context: ExecutionContext) -> None:
@@ -138,6 +140,35 @@ class PipelineRunner:
             report.reconciliation = payload.get("reconciliation")
             report.golden_regression = payload.get("golden_regression")
             report.metadata["workflow_payload"] = {k: v for k, v in payload.items() if k not in {"entries", "rows", "mapping", "assigned_roots"}}
+
+    def _persist_enterprise_report(self, report: PipelineReport, context: ExecutionContext) -> None:
+        if self.enterprise_persistence is None:
+            return
+        payload = context.payload or {}
+        if not isinstance(payload, dict):
+            return
+        dre_tree = payload.get("dre_tree")
+        dre_roots = payload.get("assigned_roots")
+        if dre_roots is None and dre_tree is not None:
+            dre_roots = getattr(dre_tree, "roots", None)
+        accounting_facts = None
+        warehouse_store = getattr(self.warehouse_builder, "store", None)
+        if warehouse_store is not None:
+            accounting_facts = getattr(warehouse_store, "facts", {}).values()
+        persisted = self.enterprise_persistence.persist_pipeline_run(
+            report,
+            accounting_entries=payload.get("entries"),
+            accounting_facts=accounting_facts,
+            dre_roots=dre_roots,
+            reconciliation_report=report.reconciliation,
+        )
+        report.metadata["enterprise_persistence"] = {
+            "pipeline_execution_id": persisted.pipeline_execution_id,
+            "accounting_entries": persisted.accounting_entries,
+            "dre_nodes": persisted.dre_nodes,
+            "reconciliation_rows": persisted.reconciliation_rows,
+            "metrics_rows": persisted.metrics_rows,
+        }
 
     def _load_workbook(self, context: ExecutionContext) -> PipelineResult:
         config: ExecutionConfiguration = context.metadata["config"]

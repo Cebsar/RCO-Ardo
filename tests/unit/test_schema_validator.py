@@ -11,19 +11,43 @@ def make_header_mapping(mapped=None, duplicates=None, missing=None, unmatched=No
 
 
 def test_validate_sheet_ok():
-    mapped = {"Company": "Company", "AccountCode": "AccountCode", "Debit": "Debit"}
+    mapped = {"Company": "Company", "AccountCode": "AccountCode", "AccountingDate": "AccountingDate", "Debit": "Debit"}
     hm = make_header_mapping(mapped=mapped)
     sv = SchemaValidator()
     report = sv.validate_sheet("Sheet1", hm)
-    assert report.is_valid or any(i.severity != "error" for i in report.issues)
+    assert report.is_valid
 
 
 def test_validate_sheet_missing_required():
     mapped = {"Company": "Company"}
-    hm = make_header_mapping(mapped=mapped, missing=["AccountCode"]) 
+    hm = make_header_mapping(mapped=mapped)
     sv = SchemaValidator()
     report = sv.validate_sheet("Sheet1", hm)
     assert any(i.code == "MISSING_FIELD" for i in report.issues)
+    assert {i.field for i in report.issues if i.code == "MISSING_FIELD"} == {"AccountCode", "AccountingDate"}
+
+
+def test_validate_sheet_allows_missing_optional_fields():
+    mapped = {"Company": "Company", "AccountCode": "AccountCode", "AccountingDate": "AccountingDate", "Debit": "Debit"}
+    hm = make_header_mapping(mapped=mapped)
+    sv = SchemaValidator()
+    report = sv.validate_sheet("Sheet1", hm)
+
+    assert report.is_valid
+    assert "Balance" in report.metadata["optional_missing"]
+    assert "DocumentNumber" in report.metadata["optional_missing"]
+    assert "History" in report.metadata["optional_missing"]
+
+
+def test_validate_sheet_distinguishes_ignored_columns():
+    mapped = {"Company": "Company", "AccountCode": "AccountCode", "AccountingDate": "AccountingDate", "Credit": "Credit"}
+    hm = make_header_mapping(mapped=mapped, unmatched=["YTD", "IgnoreColumn25"])
+    sv = SchemaValidator()
+    report = sv.validate_sheet("Sheet1", hm)
+
+    assert report.is_valid
+    assert report.metadata["ignored_columns"] == ["YTD", "IgnoreColumn25"]
+    assert [i.code for i in report.issues if i.severity == "info"] == ["IGNORED_COLUMN", "IGNORED_COLUMN"]
 
 
 def test_validate_workbook_missing_sheet():

@@ -130,6 +130,11 @@ class MasterFileValidationResult:
     duplicated_columns: List[str]
     unexpected_columns: List[str]
 
+    @property
+    def ignored_columns(self) -> List[str]:
+        """Columns outside MASTER_FILE_SCHEMA that ingestion may ignore."""
+        return self.unexpected_columns
+
 
 # Lightweight helpers (pure, no I/O) to check headers
 def find_missing_columns(headers: Iterable[str]) -> List[str]:

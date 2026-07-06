@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from time import perf_counter
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from src.domain.master_file_contract import REQUIRED_COLUMNS
+
 from .default_aliases import CANONICAL_FIELDS, DEFAULT_ALIASES
 
 logger = logging.getLogger(__name__)
@@ -85,7 +87,11 @@ class HeaderMapper:
                 unmatched.append(h_raw)
 
         duplicates = [c for c, lst in canonical_to_headers.items() if len(lst) > 1]
-        missing_required = [c for c, lst in canonical_to_headers.items() if c in CANONICAL_FIELDS and len(lst) == 0]
+        missing_required = [
+            c
+            for c in REQUIRED_COLUMNS
+            if len(canonical_to_headers.get(c, [])) == 0
+        ]
 
         duration = perf_counter() - start
         logger.info("Header mapping completed in %.6f seconds: %d headers mapped, %d unmatched", duration, len(headers_list), len(unmatched))
