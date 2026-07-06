@@ -7,4 +7,22 @@ venv/
 .DS_Store
 *.log
 logs/
-data/output/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Generated runtime data and reports
+database/*.db
+database/*.sqlite*
+outputs/
+data/
+
+# Generated artifact formats
+*.tmp
+*.bak
+*.xlsx
+*.xls
+*.csv
+*.pdf
+*.json
