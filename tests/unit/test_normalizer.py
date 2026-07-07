@@ -13,7 +13,10 @@ def make_header_mapping():
         "Data": "AccountingDate",
         "Debito": "Debit",
         "Credito": "Credit",
+        "Valor": "Balance",
         "Centro": "CostCenter",
+        "Empresa": "Company",
+        "Divisao": "Division",
         "Historico": "History",
     }
     canonical_to_headers = {v: [k] for k, v in mapping.items()}
@@ -33,6 +36,19 @@ def test_normalize_success():
     assert e.account.code.value == "1000"
     assert e.amount.amount == Decimal("150.50")
     assert e.date == date(2021, 12, 31)
+
+
+def test_signed_balance_value_takes_precedence_over_debit_credit():
+    hm = make_header_mapping()
+    normalizer = AccountingNormalizer(hm)
+    rows = [
+        (10, {"Conta": "4000", "Descricao": "Revenue", "Data": "2026-01-31", "Debito": "1000", "Credito": "0", "Valor": "-1000"}),
+    ]
+
+    entries, report = normalizer.normalize(rows)
+
+    assert report.normalized_count == 1
+    assert entries[0].amount.amount == Decimal("-1000")
 
 
 def test_missing_account_code():
@@ -91,3 +107,34 @@ def test_preserve_row_number():
     assert len(entries) == 1
     # ensure report has no errors and entry produced
     assert report.normalized_count == 1
+
+
+def test_normalize_preserves_company_division_and_cost_center_dimensions():
+    hm = make_header_mapping()
+    normalizer = AccountingNormalizer(hm)
+    rows = [
+        (
+            21,
+            {
+                "Conta": "4000",
+                "Descricao": "Revenue",
+                "Data": "2026-01-31",
+                "Credito": "100",
+                "Empresa": "0001 - ARDO CONSTRUTORA E PAVIMENTAÇÃO LTDA",
+                "Divisao": "USINA",
+                "Centro": "2 - ARDO - USINA DE ASFALTO",
+            },
+        ),
+    ]
+
+    entries, report = normalizer.normalize(rows)
+
+    assert report.normalized_count == 1
+    entry = entries[0]
+    assert entry.company is not None
+    assert entry.company.code.value == "0001"
+    assert entry.company.name == "ARDO CONSTRUTORA E PAVIMENTAÇÃO LTDA"
+    assert entry.cost_center is not None
+    assert entry.cost_center.code.value == "2"
+    assert entry.cost_center.division is not None
+    assert entry.cost_center.division.code.value == "USINA"

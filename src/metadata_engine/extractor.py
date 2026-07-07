@@ -77,7 +77,9 @@ class MetadataExtractor:
 
     def _extract_named_ranges(self, wb: Workbook) -> List[NamedRangeMetadata]:
         nrs: List[NamedRangeMetadata] = []
-        for name in wb.defined_names:  # type: ignore
+        defined_names = wb.defined_names
+        names = defined_names.values() if hasattr(defined_names, "values") else defined_names
+        for name in names:  # type: ignore
             # name is an openpyxl.workbook.defined_name.DefinedName
             attr_text = getattr(name, "attr_text", None)
             if attr_text is None:

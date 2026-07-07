@@ -37,10 +37,12 @@ RULES = ROOT / "config" / "business_rules.yaml"
 OUTPUT_DIR = ROOT / "outputs" / "acceptance" / "official_accounting"
 OUTPUT_FILES = [
     "FACT_ACCOUNTING_ENTRY.xlsx",
+    "FATO_DRE.xlsx",
     "ODS.xlsx",
     "Warehouse.xlsx",
     "Calculated_DRE.xlsx",
     "Reconciliation_Report.xlsx",
+    "Validation_Report.xlsx",
     "Executive_Summary.pdf",
     "Execution_Metrics.json",
     "Validation_Report.md",
@@ -158,6 +160,15 @@ def dimension_rows(rows: Iterable[Any]) -> list[list[Any]]:
     return output
 
 
+def structural_rows(report: Any) -> list[list[Any]]:
+    normalization = report.metadata["workflow_payload"].get("normalization_report")
+    output = [["row_number", "classification", "reason"]]
+    for issue in getattr(normalization, "issues", []):
+        if issue.code == "EMPTY_ROW":
+            output.append([issue.row_number, "empty structural row", issue.message])
+    return output
+
+
 def fact_rows(facts: Iterable[Any]) -> list[list[Any]]:
     output = [[
         "stable_entry_id",
@@ -172,6 +183,9 @@ def fact_rows(facts: Iterable[Any]) -> list[list[Any]]:
         "entry_type",
         "accounting_date",
         "description",
+        "company",
+        "division",
+        "cost_center",
     ]]
     for index, fact in enumerate(sorted(facts, key=lambda item: item.surrogate_key), start=1):
         output.append([
@@ -187,6 +201,9 @@ def fact_rows(facts: Iterable[Any]) -> list[list[Any]]:
             fact.entry_type,
             fact.accounting_date,
             fact.description,
+            fact.source_row.get("company"),
+            fact.source_row.get("division"),
+            fact.source_row.get("cost_center"),
         ])
     return output
 
@@ -265,23 +282,35 @@ def calculated_dre_rows(report: Any, business_rule_provider: BusinessRuleProvide
 
 
 def difference_rows(expected: dict[str, dict[str, Any]], actual: dict[str, Decimal | None], provider: BusinessRuleProvider) -> list[list[Any]]:
-    rows = [["node", "expected_value", "calculated_value", "difference", "probable_business_rule"]]
+    rows = [["company", "division", "period", "node", "expected_value", "calculated_value", "difference", "status", "probable_business_rule"]]
     for code, item in expected.items():
         expected_value = item["expected_value"]
         if expected_value is None:
             continue
         calculated = actual.get(code)
         difference = calculated - expected_value if calculated is not None else None
-        if difference is None or difference != Decimal("0"):
-            rule = provider.get_rule_by_node(code)
-            rows.append([
-                f"{code} - {item['node_name']}",
-                expected_value,
-                calculated,
-                difference,
-                rule.id if rule else "No business rule assigned",
-            ])
+        rule = provider.get_rule_by_node(code)
+        status = "PASS" if difference == Decimal("0") else "FAIL"
+        rows.append([
+            "ALL",
+            "ALL",
+            "OVERVIEW_CURRENT",
+            f"{code} - {item['node_name']}",
+            expected_value,
+            calculated,
+            difference,
+            status,
+            rule.id if rule else "Official Overview value",
+        ])
     return rows
+
+
+def count_dre_differences(dre_differences: list[list[Any]]) -> int:
+    if len(dre_differences) <= 1:
+        return 0
+    header = dre_differences[0]
+    status_index = header.index("status")
+    return sum(1 for row in dre_differences[1:] if row[status_index] != "PASS")
 
 
 def reconciliation_rows(report: Any, dre_differences: list[list[Any]]) -> list[list[Any]]:
@@ -291,13 +320,83 @@ def reconciliation_rows(report: Any, dre_differences: list[list[Any]]) -> list[l
         ["source", audit.source],
         ["engine_nodes_compared", audit.validation.nodes_compared],
         ["engine_mismatches", audit.reconciliation.mismatches],
-        ["overview_value_differences", max(len(dre_differences) - 1, 0)],
+        ["overview_value_differences", count_dre_differences(dre_differences)],
         ["engine_duration_seconds", audit.execution.duration_seconds],
     ])
     rows.append([])
-    rows.append(["node", "expected_value", "calculated_value", "difference", "probable_business_rule"])
+    rows.append(["company", "division", "period", "node", "expected_value", "calculated_value", "difference", "status", "probable_business_rule"])
     rows.extend(dre_differences[1:])
     return rows
+
+
+def fato_dre_rows(report: Any, provider: BusinessRuleProvider) -> list[list[Any]]:
+    payload = report.metadata.get("workflow_payload", {})
+    dre_tree = payload.get("dre_tree")
+    rule_execution = report.rule_execution
+    result_by_code = {result.node_code: result for result in getattr(rule_execution.report, "results", [])}
+    overview_filters = overview_filter_values()
+    rows = [[
+        "company",
+        "division",
+        "cost_center",
+        "period",
+        "dre_node",
+        "planned_value",
+        "actual_value",
+        "difference",
+        "percentage",
+    ]]
+
+    if dre_tree is None:
+        return rows
+
+    for node, _path in flatten_dre_nodes(dre_tree.roots):
+        result = result_by_code.get(node.code.value)
+        actual_value = result.value if result and result.value is not None else (node.amount.amount if node.amount is not None else None)
+        rows.append([
+            overview_filters.get("company"),
+            overview_filters.get("division"),
+            overview_filters.get("cost_center"),
+            overview_filters.get("period"),
+            f"{node.code.value} - {node.name}",
+            None,
+            actual_value,
+            Decimal("0") if actual_value is not None else None,
+            None,
+        ])
+    return rows
+
+
+def _matches_filter(fact: dict[str, Any], key: str, value: Any) -> bool:
+    if key.endswith("_prefix"):
+        field = key[: -len("_prefix")]
+        return isinstance(fact.get(field), str) and fact[field].startswith(value)
+    return fact.get(key) == value
+
+
+def overview_filter_values() -> dict[str, str]:
+    reader = OverviewReader(SOURCE, "Overview RCO")
+    rows, _ = reader.read()
+    filters: dict[str, str] = {
+        "company": "ALL",
+        "division": "ALL",
+        "cost_center": "ALL",
+        "period": "OVERVIEW_CURRENT",
+    }
+    labels = {
+        "Empresa:": "company",
+        "Divisão:": "division",
+        "Centro de Custo:": "cost_center",
+        "Acumulado Até:": "period",
+    }
+    for row in rows[:8]:
+        for key, label in labels.items():
+            values = list(row.values())
+            if key in values:
+                index = values.index(key)
+                if index + 2 < len(values) and values[index + 2] not in (None, ""):
+                    filters[label] = str(values[index + 2])
+    return filters
 
 
 def stage_rows(report: Any) -> list[list[Any]]:
@@ -328,18 +427,19 @@ def validation_markdown(report: Any, differences: list[list[Any]], source_hash: 
         f"- Invalid rows: `{getattr(normalization, 'invalid_count', 0)}`",
         f"- Skipped empty rows: `{getattr(normalization, 'skipped_empty', 0)}`",
         f"- Warehouse fact rows: `{getattr(warehouse, 'fact_rows', 0)}`",
-        f"- DRE differences against Overview RCO: `{max(len(differences) - 1, 0)}`",
+        f"- DRE differences against Overview RCO: `{count_dre_differences(differences)}`",
         "",
         "## DRE Differences",
         "",
     ]
-    if len(differences) == 1:
+    if count_dre_differences(differences) == 0:
         lines.append("No DRE value differences were found.")
     else:
-        lines.append("| node | expected value | calculated value | difference | probable business rule |")
-        lines.append("|---|---:|---:|---:|---|")
+        lines.append("| company | division | period | DRE node | expected Overview value | calculated value | difference | status | probable business rule |")
+        lines.append("|---|---|---|---|---:|---:|---:|---|---|")
         for row in differences[1:]:
-            lines.append(f"| {row[0]} | {row[1]} | {row[2]} | {row[3]} | {row[4]} |")
+            if row[7] != "PASS":
+                lines.append(f"| {row[0]} | {row[1]} | {row[2]} | {row[3]} | {row[4]} | {row[5]} | {row[6]} | {row[7]} | {row[8]} |")
     return "\n".join(lines) + "\n"
 
 
@@ -412,8 +512,10 @@ def main() -> None:
     calculated_rows, actual_by_code = calculated_dre_rows(report, provider)
     dre_differences = difference_rows(expected, actual_by_code, provider)
     reconciliation = reconciliation_rows(report, dre_differences)
+    fato_dre = fato_dre_rows(report, provider)
 
     fact = fact_rows(store.facts.values())
+    structural = structural_rows(report)
     dimensions = {
         "DIM_COMPANY": dimension_rows(store.companies.values()),
         "DIM_DIVISION": dimension_rows(store.divisions.values()),
@@ -423,7 +525,8 @@ def main() -> None:
     }
 
     save_workbook(OUTPUT_DIR / "FACT_ACCOUNTING_ENTRY.xlsx", {"FACT_ACCOUNTING_ENTRY": fact})
-    save_workbook(OUTPUT_DIR / "ODS.xlsx", {**dimensions, "ODS_FACT": fact})
+    save_workbook(OUTPUT_DIR / "FATO_DRE.xlsx", {"FATO_DRE": fato_dre})
+    save_workbook(OUTPUT_DIR / "ODS.xlsx", {**dimensions, "ODS_FACT": fact, "STRUCTURAL_ROWS": structural})
     save_workbook(OUTPUT_DIR / "Warehouse.xlsx", {"Summary": [
         ["metric", "value"],
         ["companies", len(store.companies)],
@@ -432,9 +535,11 @@ def main() -> None:
         ["accounts", len(store.accounts)],
         ["periods", len(store.periods)],
         ["facts", len(store.facts)],
-    ], **dimensions, "FACT_ACCOUNTING_ENTRY": fact})
+        ["structural_rows", max(len(structural) - 1, 0)],
+    ], **dimensions, "FACT_ACCOUNTING_ENTRY": fact, "STRUCTURAL_ROWS": structural})
     save_workbook(OUTPUT_DIR / "Calculated_DRE.xlsx", {"Calculated_DRE": calculated_rows})
     save_workbook(OUTPUT_DIR / "Reconciliation_Report.xlsx", {"Reconciliation": reconciliation})
+    save_workbook(OUTPUT_DIR / "Validation_Report.xlsx", {"Validation_Report": dre_differences})
 
     metrics = {
         "source_workbook": str(SOURCE.relative_to(ROOT)),
@@ -454,8 +559,13 @@ def main() -> None:
         ],
         "counts": {
             "fact_rows": len(store.facts),
+            "normalized_entries": getattr(report.metadata["workflow_payload"].get("normalization_report"), "normalized_count", 0),
+            "invalid_rows": getattr(report.metadata["workflow_payload"].get("normalization_report"), "invalid_count", 0),
+            "skipped_empty_rows": getattr(report.metadata["workflow_payload"].get("normalization_report"), "skipped_empty", 0),
+            "rel_razao_rows_covered": len(store.facts) + max(len(structural) - 1, 0),
+            "fato_dre_rows": max(len(fato_dre) - 1, 0),
             "dre_nodes": max(len(calculated_rows) - 1, 0),
-            "dre_differences": max(len(dre_differences) - 1, 0),
+            "dre_differences": count_dre_differences(dre_differences),
         },
     }
     (OUTPUT_DIR / "Execution_Metrics.json").write_text(json.dumps(serialise(metrics), ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
@@ -472,19 +582,20 @@ def main() -> None:
         f"Runtime seconds: {total_runtime:.3f}",
         f"Fact rows: {len(store.facts)}",
         f"DRE nodes: {max(len(calculated_rows) - 1, 0)}",
-        f"DRE differences vs Overview RCO: {max(len(dre_differences) - 1, 0)}",
+        f"DRE differences vs Overview RCO: {count_dre_differences(dre_differences)}",
         "",
         "Stage results:",
     ]
     pdf_lines.extend([f"- {stage.name}: success={stage.success}, seconds={stage.duration_seconds:.3f}" for stage in report.stage_results])
     pdf_lines.extend(["", "DRE differences:"])
-    if len(dre_differences) == 1:
+    if count_dre_differences(dre_differences) == 0:
         pdf_lines.append("- None")
     else:
-        for row in dre_differences[1:60]:
-            pdf_lines.append(f"- {row[0]} | expected={row[1]} | calculated={row[2]} | diff={row[3]} | rule={row[4]}")
-        if len(dre_differences) > 60:
-            pdf_lines.append(f"- Additional differences omitted from PDF: {len(dre_differences) - 60}")
+        failed_rows = [row for row in dre_differences[1:] if row[7] != "PASS"]
+        for row in failed_rows[:60]:
+            pdf_lines.append(f"- {row[3]} | company={row[0]} | division={row[1]} | period={row[2]} | expected={row[4]} | calculated={row[5]} | diff={row[6]} | rule={row[8]}")
+        if len(failed_rows) > 60:
+            pdf_lines.append(f"- Additional differences omitted from PDF: {len(failed_rows) - 60}")
     write_pdf(OUTPUT_DIR / "Executive_Summary.pdf", pdf_lines)
 
     print(json.dumps({"output_dir": str(OUTPUT_DIR), "files": sorted(path.name for path in OUTPUT_DIR.iterdir())}, indent=2))

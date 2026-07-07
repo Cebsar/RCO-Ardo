@@ -27,9 +27,9 @@ class ExcelAdapter(IDataSource):
         self._wb = None
 
     # IDataSource implementation
-    def read(self, source: str) -> Any:
+    def read(self, source: str, sheet_name: Optional[str] = None) -> Any:
         self.load(source)
-        return list(self.get_rows())
+        return list(self.get_rows(sheet_name=sheet_name))
 
     def load(self, path: Optional[str] = None) -> None:
         path = path or self.path
@@ -65,7 +65,7 @@ class ExcelAdapter(IDataSource):
             )
         for row_cells in reader.iter_rows(min_row=2):
             # yield raw dictionary mapping header->cell.value
-            row_dict: Dict[str, Any] = {}
+            row_dict: Dict[str, Any] = {"__row__": row_cells[0].row if row_cells else None}
             for header, cell in zip(headers, row_cells):
                 row_dict[header] = read_cell(cell)
             yield row_dict

@@ -21,8 +21,13 @@ class DimensionBuilder:
         self.store = store
 
     def build_company(self, entry: AccountingEntry) -> int:
-        key = entry.account.code.value
-        attributes = {"name": entry.account.name}
+        company = getattr(entry, "company", None)
+        if company is not None:
+            key = company.code.value
+            attributes = {"name": company.name}
+        else:
+            key = entry.account.code.value
+            attributes = {"name": entry.account.name, "source": "account_fallback"}
         row = self.store.ensure_dimension("companies", key, attributes)
         return row.surrogate_key
 
@@ -32,7 +37,7 @@ class DimensionBuilder:
         key = entry.cost_center.division.code.value
         attributes = {
             "name": entry.cost_center.division.name,
-            "company_key": entry.account.code.value,
+            "company_key": entry.cost_center.division.company.code.value,
         }
         row = self.store.ensure_dimension("divisions", key, attributes)
         return row.surrogate_key
@@ -76,12 +81,15 @@ class FactBuilder:
             costcenter_key=costcenter_key,
             account_key=account_key,
             period_key=period_key,
-            amount=entry.amount.amount if isinstance(entry.amount, Decimal) else Decimal(entry.amount.amount),
+            amount=entry.amount if isinstance(entry.amount, Decimal) else Decimal(entry.amount.amount),
             entry_type=entry.entry_type.value,
             accounting_date=entry.date,
             description=entry.description,
             source_row={
                 "account_code": entry.account.code.value,
+                "company": entry.company.code.value if getattr(entry, "company", None) else None,
+                "division": entry.cost_center.division.code.value if entry.cost_center and entry.cost_center.division else None,
+                "cost_center": entry.cost_center.code.value if entry.cost_center else None,
                 "entry_id": entry.id,
             },
             source_entry=entry,

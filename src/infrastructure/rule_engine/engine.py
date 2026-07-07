@@ -65,7 +65,8 @@ class RuleEngine:
     def _evaluate_node(self, node: DRENode, facts: List[Dict[str, Any]], parameters: Dict[str, Any], result_map: Dict[str, RuleResult]) -> RuleResult:
         rule = getattr(node, "rule", None)
         if rule is None:
-            return RuleResult(node_code=node.code.value, warnings=["No rule assigned"])
+            value = node.amount.amount if node.amount is not None else None
+            return RuleResult(node_code=node.code.value, value=value, warnings=["No rule assigned"])
 
         children_values = [
             result_map[child.code.value].value

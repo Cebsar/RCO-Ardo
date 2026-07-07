@@ -17,14 +17,14 @@ CANONICAL_FIELDS: List[str] = [
 
 DEFAULT_ALIASES: Dict[str, List[str]] = {
     "Company": ["company", "empresa", "comp"],
-    "Division": ["division", "divisao", "dept", "department"],
-    "CostCenter": ["costcenter", "cost_center", "centrocusto", "cc"],
-    "AccountCode": ["accountcode", "account_code", "codigo", "account"],
-    "AccountDescription": ["accountdescription", "account_description", "descricao", "description"],
+    "Division": ["division", "divisao", "divisão", "dept", "department"],
+    "CostCenter": ["costcenter", "cost_center", "centrocusto", "centro de custo", "cc"],
+    "AccountCode": ["accountcode", "account_code", "codigo", "account", "contacontabil", "conta contabil", "conta contábil"],
+    "AccountDescription": ["accountdescription", "account_description", "descricao", "description", "nomeconta", "nome conta"],
     "AccountingDate": ["accountingdate", "date", "data", "postingdate"],
-    "DocumentNumber": ["documentnumber", "docnumber", "document", "numero"],
-    "History": ["history", "historico", "narrative"],
-    "Debit": ["debit", "debito", "dr"],
-    "Credit": ["credit", "credito", "cr"],
-    "Balance": ["balance", "saldo", "bal"],
+    "DocumentNumber": ["documentnumber", "docnumber", "document", "numero", "lancamento", "lançamento"],
+    "History": ["history", "historico", "hisorico", "histórico", "narrative"],
+    "Debit": ["debit", "debito", "débito", "dr"],
+    "Credit": ["credit", "credito", "crédito", "cr"],
+    "Balance": ["balance", "saldo", "bal", "valor"],
 }

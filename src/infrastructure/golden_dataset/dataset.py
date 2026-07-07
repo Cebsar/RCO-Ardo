@@ -10,6 +10,10 @@ from .models import GoldenDRE, GoldenFactAccounting, GoldenOverview, GoldenWorkb
 from .utilities import compute_dataset_hash, format_dataset_version, write_json
 
 
+def _serialize_path(path: Path) -> str:
+    return path.as_posix()
+
+
 @dataclass(frozen=True)
 class DatasetManifest:
     version: str
@@ -41,7 +45,7 @@ class GoldenDataset:
     def to_dict(self) -> Dict[str, Any]:
         return {
             "workbook": {
-                "path": str(self.workbook.path),
+                "path": _serialize_path(self.workbook.path),
                 "fingerprint": self.workbook.fingerprint,
                 "row_count": self.workbook.row_count,
                 "columns": self.workbook.columns,
@@ -94,7 +98,7 @@ class GoldenDataset:
         metadata = metadata or {}
         payload = {
             "workbook": {
-                "path": str(workbook.path),
+                "path": _serialize_path(workbook.path),
                 "fingerprint": workbook.fingerprint,
                 "row_count": workbook.row_count,
                 "columns": workbook.columns,
@@ -126,7 +130,7 @@ class GoldenDataset:
             dataset_hash=dataset_hash,
             source_paths=source_paths,
             artifacts={
-                "workbook": str(workbook.path),
+                "workbook": _serialize_path(workbook.path),
                 "overview": overview.source,
                 "fact_accounting": fact_accounting.source,
                 "dre": dre.source,

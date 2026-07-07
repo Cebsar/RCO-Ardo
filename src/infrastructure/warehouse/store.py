@@ -19,6 +19,10 @@ class OperationalDataStore:
     facts: Dict[str, FactRow] = field(default_factory=dict)
     next_key: int = 1
 
+    @property
+    def fact_rows(self) -> int:
+        return len(self.facts)
+
     def _get_next_key(self) -> int:
         current = self.next_key
         self.next_key += 1

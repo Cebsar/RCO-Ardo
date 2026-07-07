@@ -59,6 +59,7 @@ class AccountingEntry:
     entry_type: EntryType
     cost_center: Optional[CostCenter] = None
     description: Optional[str] = None
+    company: Optional[Company] = None
 
 
 @dataclass(frozen=True)

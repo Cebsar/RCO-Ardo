@@ -26,7 +26,7 @@ class WorkbookReader:
         self._wb: Optional[Workbook] = None
         self._path: Optional[str] = None
         self._metadata: Optional[WorkbookMetadata] = None
-        self._logger = logger or logger
+        self._logger = logger or logging.getLogger(__name__)
 
     def load(self, path: str) -> WorkbookMetadata:
         self._path = path

@@ -20,6 +20,17 @@ class DRETreeBuilder:
         parser = HierarchyParser(rows)
         parsed_items = parser.parse()
         report = HierarchyReport(rows_read=len(rows))
+        report.metadata["row_classifications"] = getattr(parser, "row_classifications", {})
+        report.metadata["hidden_rows"] = [
+            int(row.get("_row_number", 0))
+            for row in rows
+            if row.get("_hidden")
+        ]
+        report.metadata["formula_rows"] = [
+            int(row.get("_row_number", 0))
+            for row in rows
+            if row.get("_formulas")
+        ]
 
         builder = HierarchyBuilder()
         roots = builder.build(parsed_items, report)
@@ -34,7 +45,15 @@ class DRETreeBuilder:
                 execution_time_seconds=report.execution_time_seconds,
             )
         logger.info("Built DRE tree with %d nodes in %.6f seconds", report.nodes_count, report.execution_time_seconds)
-        tree = DRETree(roots=tuple(roots), metadata={"source_rows": len(rows)})
+        tree = DRETree(
+            roots=tuple(roots),
+            metadata={
+                "source_rows": len(rows),
+                "row_classifications": report.metadata["row_classifications"],
+                "hidden_rows": report.metadata["hidden_rows"],
+                "formula_rows": report.metadata["formula_rows"],
+            },
+        )
         return tree, report
 
     def build_from_path(self, path, sheet_name: str = "Overview RCO") -> Tuple[DRETree, HierarchyReport]:

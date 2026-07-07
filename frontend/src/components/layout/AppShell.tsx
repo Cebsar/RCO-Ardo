@@ -1,15 +1,17 @@
-import { Activity, BarChart3, Database, GitBranch, Home, ShieldCheck } from "lucide-react";
+import { Activity, BarChart3, Database, Download, GitBranch, Home, ListChecks, ShieldCheck, TableProperties } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AuthPanel } from "@/components/layout/AuthPanel";
 import { cn } from "@/lib/utils";
 
-type PageId = "dashboard" | "dre" | "pipeline" | "reconciliation" | "system";
+type PageId = "dashboard" | "history" | "validation" | "downloads" | "dre" | "pipeline" | "reconciliation" | "system";
 
 const navigation = [
-  { id: "dashboard", label: "Dashboard", icon: Home },
+  { id: "dashboard", label: "Home", icon: Home },
+  { id: "history", label: "Execution History", icon: TableProperties },
+  { id: "validation", label: "Validation Center", icon: ListChecks },
+  { id: "downloads", label: "Download Center", icon: Download },
   { id: "dre", label: "DRE", icon: BarChart3 },
-  { id: "pipeline", label: "Pipeline", icon: GitBranch },
   { id: "reconciliation", label: "Reconciliation", icon: Database },
   { id: "system", label: "System", icon: ShieldCheck },
 ] satisfies Array<{ id: PageId; label: string; icon: typeof Home }>;

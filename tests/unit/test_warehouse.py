@@ -3,24 +3,24 @@ from decimal import Decimal
 
 from src.domain.entities import AccountingEntry, Account, CostCenter, Company, Division
 from src.domain.enums import AccountType, EntryType
-from src.domain.value_objects import AccountCode, CostCenterCode
+from src.domain.value_objects import AccountCode, CompanyCode, CostCenterCode, DivisionCode
 from src.infrastructure.warehouse.builder import WarehouseBuilder
 from src.infrastructure.warehouse.store import OperationalDataStore
 
 
-def make_entry(entry_id: str, account_code: str, account_name: str, amount: Decimal, entry_type: EntryType, accounting_date: date, costcenter: CostCenter | None = None) -> AccountingEntry:
+def make_entry(entry_id: str, account_code: str, account_name: str, amount: Decimal, entry_type: EntryType, accounting_date: date, costcenter: CostCenter | None = None, company: Company | None = None) -> AccountingEntry:
     account = Account(code=AccountCode(account_code), name=account_name, type=AccountType.EXPENSE)
-    return AccountingEntry(id=entry_id, account=account, amount=amount, date=accounting_date, entry_type=entry_type, cost_center=costcenter, description="Test")
+    return AccountingEntry(id=entry_id, account=account, amount=amount, date=accounting_date, entry_type=entry_type, cost_center=costcenter, description="Test", company=company)
 
 
 def test_warehouse_builder_creates_dimensions_and_fact():
     store = OperationalDataStore()
     builder = WarehouseBuilder(store)
 
-    company = Company(code=AccountCode("1000"), name="ACME")
-    division = Division(code=CostCenterCode("D1"), name="Div1", company=company)
+    company = Company(code=CompanyCode("0001"), name="ACME")
+    division = Division(code=DivisionCode("D1"), name="Div1", company=company)
     costcenter = CostCenter(code=CostCenterCode("CC1"), name="Cost Center 1", division=division)
-    entry = make_entry("e1", "1000", "ACME", Decimal("100.00"), EntryType.DEBIT, date(2024, 1, 31), costcenter)
+    entry = make_entry("e1", "1000", "ACME", Decimal("100.00"), EntryType.DEBIT, date(2024, 1, 31), costcenter, company)
 
     report = builder.build([entry])
     assert report.fact_rows == 1
@@ -29,6 +29,8 @@ def test_warehouse_builder_creates_dimensions_and_fact():
     assert report.costcenter_rows == 1
     assert report.account_rows == 1
     assert report.period_rows == 1
+    assert store.companies["0001"].attributes["name"] == "ACME"
+    assert store.divisions["D1"].attributes["company_key"] == "0001"
 
 
 def test_incremental_load_preserves_surrogate_keys():

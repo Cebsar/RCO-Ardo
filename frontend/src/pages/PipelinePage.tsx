@@ -6,20 +6,56 @@ import { ErrorState, LoadingGrid, EmptyState } from "@/components/layout/PageSta
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { enterpriseApi } from "@/lib/api";
-import type { PipelineExecutionSummary } from "@/lib/types";
-import { formatDate } from "@/lib/utils";
+import { listOperationalExecutions } from "@/lib/operational";
+import type { PipelineExecutionDetail, PipelineExecutionSummary } from "@/lib/types";
+import { formatDate, formatNumber } from "@/lib/utils";
 
-const columns: ColumnDef<PipelineExecutionSummary>[] = [
+type HistoryRow = {
+  id: string;
+  date: string | null;
+  user: string;
+  durationSeconds: number;
+  workbookSha256: string;
+  rowsProcessed: number;
+  rowsIgnored: number;
+  status: string;
+  source: "API" | "Dashboard";
+  apiExecution?: PipelineExecutionSummary;
+};
+
+const columns: ColumnDef<HistoryRow>[] = [
   { accessorKey: "id", header: "Execution ID" },
-  { accessorKey: "pipeline_name", header: "Pipeline" },
+  { accessorKey: "date", header: "Date", cell: ({ row }) => formatDate(row.original.date) },
+  { accessorKey: "user", header: "User" },
+  { accessorKey: "durationSeconds", header: "Duration", cell: ({ row }) => `${row.original.durationSeconds.toFixed(1)}s` },
+  {
+    accessorKey: "workbookSha256",
+    header: "Workbook SHA256",
+    cell: ({ row }) => <span className="block max-w-[180px] truncate font-mono text-xs">{row.original.workbookSha256}</span>,
+  },
+  { accessorKey: "rowsProcessed", header: "Rows processed", cell: ({ row }) => formatNumber(row.original.rowsProcessed) },
+  { accessorKey: "rowsIgnored", header: "Rows ignored", cell: ({ row }) => formatNumber(row.original.rowsIgnored) },
   {
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => <Badge className="bg-secondary text-secondary-foreground">{row.original.status}</Badge>,
   },
-  { accessorKey: "duration_seconds", header: "Duration" },
-  { accessorKey: "created_at", header: "Created", cell: ({ row }) => formatDate(row.original.created_at) },
 ];
+
+function apiRow(execution: PipelineExecutionSummary, detail?: PipelineExecutionDetail): HistoryRow {
+  return {
+    id: execution.id,
+    date: execution.created_at,
+    user: "api-service",
+    durationSeconds: execution.duration_seconds,
+    workbookSha256: typeof detail?.metadata?.workbook_sha256 === "string" ? detail.metadata.workbook_sha256 : "Not available",
+    rowsProcessed: (detail?.accounting_entries ?? 0) + (detail?.dre_nodes ?? 0) + (detail?.reconciliation_rows ?? 0),
+    rowsIgnored: Array.isArray(detail?.errors) ? detail.errors.length : 0,
+    status: execution.status,
+    source: "API",
+    apiExecution: execution,
+  };
+}
 
 export function PipelinePage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -27,21 +63,34 @@ export function PipelinePage() {
   const detail = useQuery({
     queryKey: ["pipeline-detail", selectedId],
     queryFn: () => enterpriseApi.pipelineExecution(selectedId as string),
-    enabled: Boolean(selectedId),
+    enabled: Boolean(selectedId) && !selectedId?.startsWith("op-"),
   });
 
   if (history.isLoading) return <LoadingGrid />;
   if (history.isError || !history.data) return <ErrorState message="Pipeline history could not be loaded." onRetry={() => history.refetch()} />;
 
   const executions = history.data.data.executions;
+  const operationalRows: HistoryRow[] = listOperationalExecutions().map((execution) => ({
+    id: execution.id,
+    date: execution.date,
+    user: execution.user,
+    durationSeconds: execution.durationSeconds,
+    workbookSha256: execution.workbookSha256,
+    rowsProcessed: execution.rowsProcessed,
+    rowsIgnored: execution.rowsIgnored,
+    status: execution.status,
+    source: "Dashboard",
+  }));
+  const rows = [...operationalRows, ...executions.map((execution) => apiRow(execution))];
+  const selectedRow = rows.find((row) => row.id === selectedId);
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(360px,0.6fr)]">
       <section>
-        {executions.length === 0 ? (
-          <EmptyState title="No pipeline executions" message="No persisted pipeline history is available." />
+        {rows.length === 0 ? (
+          <EmptyState title="No execution history" message="Run the accounting pipeline from Home to start building operational history." />
         ) : (
-          <DataTable columns={columns} data={executions} onRowClick={(row) => setSelectedId(row.id)} />
+          <DataTable columns={columns} data={rows} onRowClick={(row) => setSelectedId(row.id)} />
         )}
       </section>
       <Card>
@@ -49,11 +98,18 @@ export function PipelinePage() {
           <CardTitle>Execution Detail</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
-          {!selectedId ? <p className="text-muted-foreground">Select a pipeline execution to inspect persisted counts.</p> : null}
+          {!selectedId ? <p className="text-muted-foreground">Select an execution to inspect operational counts.</p> : null}
           {detail.isLoading ? <p className="text-muted-foreground">Loading execution...</p> : null}
+          {selectedRow ? (
+            <>
+              <p className="font-medium">{selectedRow.id}</p>
+              <p>Source: {selectedRow.source}</p>
+              <p>Rows processed: {formatNumber(selectedRow.rowsProcessed)}</p>
+              <p>Rows ignored: {formatNumber(selectedRow.rowsIgnored)}</p>
+            </>
+          ) : null}
           {detail.data ? (
             <>
-              <p className="font-medium">{detail.data.data.execution.id}</p>
               <p>Accounting entries: {detail.data.data.execution.accounting_entries}</p>
               <p>DRE nodes: {detail.data.data.execution.dre_nodes}</p>
               <p>Reconciliation rows: {detail.data.data.execution.reconciliation_rows}</p>

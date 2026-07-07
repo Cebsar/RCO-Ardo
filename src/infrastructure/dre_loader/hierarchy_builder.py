@@ -6,7 +6,7 @@ from typing import List
 
 from src.domain.entities import DRENode
 from src.domain.enums import DRELevel
-from src.domain.value_objects import AccountCode
+from src.domain.value_objects import AccountCode, Money
 from .models import ExecutionMetrics, HierarchyReport, TraversalReport, TreeValidationReport
 from .parser import ParsedHierarchyItem
 
@@ -32,8 +32,8 @@ class HierarchyBuilder:
                 node=DRENode(
                 code=AccountCode(item.code),
                 name=item.label,
-                level=DRELevel(item.level) if item.level in {1, 2, 3} else DRELevel.LEVEL_1,
-                amount=None,
+                level=DRELevel(item.level) if item.level in {level.value for level in DRELevel} else DRELevel.LEVEL_1,
+                amount=Money(item.amount) if item.amount is not None else None,
                 children=(),
                 ),
             )

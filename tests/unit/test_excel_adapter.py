@@ -27,7 +27,7 @@ def create_test_workbook(path: str):
     from openpyxl.workbook.defined_name import DefinedName
 
     dn = DefinedName('TestRange', attr_text=f"'{ws1.title}'!$A$1:$B$2")
-    wb.defined_names.append(dn)
+    wb.defined_names.add(dn)
 
     # second sheet
     ws2 = wb.create_sheet(title="Sheet2")

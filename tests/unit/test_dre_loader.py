@@ -30,6 +30,24 @@ def test_overview_reader_reads_rows():
         assert rows[1]["col_1"] == "Revenue"
 
 
+def test_overview_reader_preserves_hidden_rows_and_formula_metadata():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        path = Path(tmp_dir) / "overview.xlsx"
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Overview RCO"
+        ws.append(["N1", "Real"])
+        ws.append(["Revenue", "=SUM(B3:B4)"])
+        ws.row_dimensions[2].hidden = True
+        wb.save(path)
+
+        reader = OverviewReader(path=path)
+        rows, _ = reader.read()
+
+        assert rows[1]["_hidden"] is True
+        assert rows[1]["_formulas"] == {"col_2": "=SUM(B3:B4)"}
+
+
 def test_hierarchy_parser_detects_levels():
     rows = [
         {"col_1": "N1", "col_2": "N2", "col_3": "N3", "_row_number": 1},
@@ -44,6 +62,24 @@ def test_hierarchy_parser_detects_levels():
     assert items[0].label == "Revenue" and items[0].level == 1
     assert items[1].label == "Sales" and items[1].level == 2
     assert items[2].label == "Online" and items[2].level == 3
+
+
+def test_hierarchy_parser_classifies_empty_separator_hidden_and_account_rows():
+    rows = [
+        {"col_1": "N1", "col_2": "N2", "_row_number": 1},
+        {"col_1": None, "col_2": None, "_row_number": 2, "_hidden": True},
+        {"col_1": "-----", "col_2": None, "_row_number": 3},
+        {"col_1": "1.1.2.01.9999 - Clientes", "col_2": None, "_row_number": 4},
+        {"col_1": "Total Receita", "col_2": None, "_row_number": 5, "_formulas": {"col_3": "=SUM(C1:C4)"}},
+    ]
+    parser = HierarchyParser(rows)
+    items = parser.parse()
+
+    assert parser.row_classifications[2] == "structural empty row"
+    assert parser.row_classifications[3] == "visual separator"
+    assert parser.row_classifications[4] == "analytical account"
+    assert parser.row_classifications[5] == "synthetic account"
+    assert [item.label for item in items] == ["1.1.2.01.9999 - Clientes", "Total Receita"]
 
 
 def test_dre_tree_builder_preserves_hierarchy():
@@ -115,3 +151,19 @@ def test_dre_tree_builder_from_path_reads_source():
         assert report.rows_read == 3
         assert len(tree.roots) == 1
         assert tree.metadata["sheet_name"] == "Overview RCO"
+
+
+def test_dre_tree_builder_reports_row_classification_metadata():
+    rows = [
+        {"col_1": "N1", "_row_number": 1},
+        {"col_1": None, "_row_number": 2, "_hidden": True},
+        {"col_1": "Revenue", "_row_number": 3, "_formulas": {"col_2": "=SUM(B:B)"}},
+    ]
+
+    builder = DRETreeBuilder()
+    tree, report = builder.build_from_rows(rows)
+
+    assert report.metadata["row_classifications"][2] == "structural empty row"
+    assert report.metadata["hidden_rows"] == [2]
+    assert report.metadata["formula_rows"] == [3]
+    assert tree.metadata["row_classifications"][3] == "synthetic account"

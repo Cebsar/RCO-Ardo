@@ -36,8 +36,8 @@ class DifferenceCalculator:
         )
 
     def compare_hierarchy(self, expected_nodes: List[DRENode], actual_nodes: List[DRENode], tolerance: ToleranceRule) -> List[DifferenceItem]:
-        expected_map = {node.code.value: node for node in expected_nodes}
-        actual_map = {node.code.value: node for node in actual_nodes}
+        expected_map = self._flatten_by_code(expected_nodes)
+        actual_map = self._flatten_by_code(actual_nodes)
         differences: List[DifferenceItem] = []
 
         keys = list(dict.fromkeys([*expected_map.keys(), *actual_map.keys()]))
@@ -46,3 +46,15 @@ class DifferenceCalculator:
             actual = actual_map.get(key)
             differences.append(self.compare_node(expected, actual, tolerance))
         return differences
+
+    def _flatten_by_code(self, nodes: List[DRENode]) -> Dict[str, DRENode]:
+        flattened: Dict[str, DRENode] = {}
+
+        def walk(node: DRENode) -> None:
+            flattened[node.code.value] = node
+            for child in node.children:
+                walk(child)
+
+        for node in nodes:
+            walk(node)
+        return flattened

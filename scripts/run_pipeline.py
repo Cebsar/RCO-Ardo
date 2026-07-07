@@ -20,6 +20,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run ARDO financial analytics pipeline")
     parser.add_argument("--source", "-s", required=True, help="Source master Excel file path")
     parser.add_argument("--rules", "-r", default="config/business_rules.yaml", help="Business rules config path")
+    parser.add_argument("--accounting-sheet", default="Rel_Razão", help="Accounting movements worksheet name")
     parser.add_argument("--dre-sheet", default="Overview RCO", help="DRE overview worksheet name")
     parser.add_argument("--golden-dir", default=None, help="Directory to save golden dataset manifest")
     parser.add_argument("--no-reconcile", dest="reconcile", action="store_false", help="Skip reconciliation stage")
@@ -35,6 +36,7 @@ def main() -> None:
     config = ExecutionConfiguration(
         source_path=source_path,
         rules_config_path=rules_path,
+        accounting_sheet_name=args.accounting_sheet,
         dre_sheet_name=args.dre_sheet,
         golden_dataset_output_dir=golden_dir,
         enable_golden_dataset=bool(golden_dir),

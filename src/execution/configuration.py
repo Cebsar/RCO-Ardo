@@ -9,6 +9,7 @@ from typing import Optional
 class ExecutionConfiguration:
     source_path: Path
     rules_config_path: Path
+    accounting_sheet_name: str = "Rel_Razão"
     dre_sheet_name: str = "Overview RCO"
     golden_dataset_output_dir: Optional[Path] = None
     enable_golden_dataset: bool = False

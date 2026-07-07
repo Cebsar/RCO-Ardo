@@ -172,8 +172,13 @@ class PipelineRunner:
 
     def _load_workbook(self, context: ExecutionContext) -> PipelineResult:
         config: ExecutionConfiguration = context.metadata["config"]
-        rows = self.excel_adapter.read(str(config.source_path))
-        headers = self.excel_adapter.get_headers()
+        sheet_name = getattr(config, "accounting_sheet_name", None)
+        try:
+            rows = self.excel_adapter.read(str(config.source_path), sheet_name=sheet_name)
+            headers = self.excel_adapter.get_headers(sheet_name=sheet_name)
+        except TypeError:
+            rows = self.excel_adapter.read(str(config.source_path))
+            headers = self.excel_adapter.get_headers()
         return PipelineResult(success=True, output={"rows": rows, "headers": headers})
 
     def _map_headers(self, context: ExecutionContext) -> PipelineResult:
@@ -308,6 +313,10 @@ class PipelineRunner:
                     "account_code": entry.account.code.value,
                     "amount": entry.amount.amount if hasattr(entry.amount, "amount") else entry.amount,
                     "date": entry.date,
+                    "period": entry.date.strftime("%Y%m"),
+                    "company": entry.company.code.value if getattr(entry, "company", None) else None,
+                    "division": entry.cost_center.division.code.value if entry.cost_center and entry.cost_center.division else None,
+                    "cost_center": entry.cost_center.code.value if entry.cost_center else None,
                     "entry_id": entry.id,
                 }
             )
