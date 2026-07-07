@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.config import get_security_settings
 from api.middleware.request_context import RequestContextMiddleware
 from api.metadata import API_DESCRIPTION, API_TITLE, API_VERSION
-from api.routers import analytics, auth, financial, pipeline, system
+from api.routers import analytics, auth, financial, operations, pipeline, system
 
 
 def create_app() -> FastAPI:
@@ -33,6 +33,7 @@ def create_app() -> FastAPI:
     app.include_router(pipeline.router)
     app.include_router(financial.router)
     app.include_router(analytics.router)
+    app.include_router(operations.router)
     return app
 
 

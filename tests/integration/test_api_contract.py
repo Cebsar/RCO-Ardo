@@ -12,6 +12,9 @@ EXPECTED_GET_ENDPOINTS = {
     "/financial/dre/{company}",
     "/financial/dre/{company}/{period}",
     "/analytics/kpis",
+    "/reconciliation",
+    "/validation",
+    "/downloads",
 }
 
 
@@ -41,6 +44,9 @@ def test_api_contract_uses_standard_response_envelope(tmp_path):
         ("/financial/dre/company-a", headers),
         ("/financial/dre/company-a/202606", headers),
         ("/analytics/kpis", headers),
+        ("/reconciliation", headers),
+        ("/validation", headers),
+        ("/downloads", headers),
     ]
 
     for endpoint, request_headers in endpoints:
@@ -62,6 +68,9 @@ def test_api_contract_protects_enterprise_endpoints(tmp_path):
         "/financial/dre/company-a",
         "/financial/dre/company-a/202606",
         "/analytics/kpis",
+        "/reconciliation",
+        "/validation",
+        "/downloads",
     ]
 
     for endpoint in protected_endpoints:

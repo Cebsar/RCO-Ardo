@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import shutil
+from pathlib import Path
+from uuid import uuid4
+
 from fastapi import HTTPException, status
+from fastapi import UploadFile
 
 from api.metadata import API_VERSION
 from api.repositories.pipeline import PipelineRepository
@@ -13,6 +18,18 @@ from api.schemas.pipeline import (
     PipelineHistoryAPIResponse,
     PipelineHistoryResponse,
 )
+from src.execution.configuration import ExecutionConfiguration
+from src.execution.runner import PipelineRunner
+from src.infrastructure.business_rules.provider import BusinessRuleProvider
+from src.infrastructure.dre_loader.builder import DRETreeBuilder
+from src.infrastructure.excel.excel_adapter import ExcelAdapter
+from src.infrastructure.header_mapper.mapper import HeaderMapper
+from src.infrastructure.persistence.database import DatabaseConfig
+from src.infrastructure.persistence.service import EnterprisePersistenceService
+from src.infrastructure.reconciliation.engine import ReconciliationEngine
+from src.infrastructure.rule_engine.engine import RuleEngine
+from src.infrastructure.schema_validator.validator import SchemaValidator
+from src.infrastructure.warehouse.builder import WarehouseBuilder
 
 
 class PipelineService:
@@ -43,6 +60,45 @@ class PipelineService:
             data=PipelineExecutionResponse(execution=detail),
             meta=response_meta(API_VERSION),
         )
+
+    def run_uploaded_workbook(self, workbook: UploadFile) -> PipelineExecutionAPIResponse:
+        suffix = Path(workbook.filename or "").suffix.lower()
+        if suffix not in {".xlsx", ".xlsm", ".xls"}:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Workbook must be an Excel file")
+
+        upload_dir = Path("data") / "uploads"
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        safe_name = Path(workbook.filename or "workbook.xlsx").name
+        source_path = upload_dir / f"{uuid4().hex}_{safe_name}"
+        with source_path.open("wb") as handle:
+            shutil.copyfileobj(workbook.file, handle)
+
+        persistence = EnterprisePersistenceService(config=DatabaseConfig.from_env())
+        persistence.create_database()
+        runner = PipelineRunner(
+            excel_adapter=ExcelAdapter(path=str(source_path)),
+            header_mapper=HeaderMapper(),
+            schema_validator=SchemaValidator(),
+            warehouse_builder=WarehouseBuilder(),
+            dre_tree_builder=DRETreeBuilder(),
+            business_rule_provider=BusinessRuleProvider(Path("config") / "business_rules.yaml"),
+            rule_engine=RuleEngine(),
+            reconciliation_engine=ReconciliationEngine(),
+            enterprise_persistence=persistence,
+        )
+        report = runner.run(
+            ExecutionConfiguration(
+                source_path=source_path,
+                rules_config_path=Path("config") / "business_rules.yaml",
+                accounting_sheet_name="Rel_Razão",
+                dre_sheet_name="Overview RCO",
+            )
+        )
+        persisted = report.metadata.get("enterprise_persistence", {})
+        execution_id = persisted.get("pipeline_execution_id")
+        if not execution_id:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Pipeline did not persist execution")
+        return self.get_execution(execution_id)
 
     def _summary(self, row) -> PipelineExecutionSummary:
         return PipelineExecutionSummary(

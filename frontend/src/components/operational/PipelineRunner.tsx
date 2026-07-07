@@ -4,9 +4,8 @@ import { notify } from "@/components/layout/ToastViewport";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { enterpriseApi } from "@/lib/api";
 import {
-  estimateRows,
-  saveOperationalExecution,
   sha256File,
   validateWorkbook,
   type OperationalStage,
@@ -27,10 +26,6 @@ function executionTimestamp() {
     .slice(0, 14);
 }
 
-function wait(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
 export function PipelineRunner({ onComplete }: { onComplete: () => Promise<void> | void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -48,38 +43,27 @@ export function PipelineRunner({ onComplete }: { onComplete: () => Promise<void>
 
     setRunning(true);
     setFriendlyError("");
-    const startedAt = performance.now();
     const executionId = `op-${executionTimestamp()}`;
 
     try {
       const issues = validateWorkbook(file, executionId);
       const blockingIssue = issues.some((issue) => issue.type === "error");
-      const workbookSha256 = await sha256File(file);
-
-      for (const [index, nextStage] of stages.entries()) {
-        setStage(nextStage);
-        setProgress(Math.round(((index + 1) / stages.length) * 100));
-        await wait(nextStage === "Processing" ? 850 : 450);
-        if (nextStage === "Validation" && blockingIssue) {
-          throw new Error("Validation stopped the run. Review the Validation Center before processing again.");
-        }
+      await sha256File(file);
+      setStage("Validation");
+      setProgress(20);
+      if (blockingIssue) {
+        throw new Error("Validation stopped the run. Review the Validation Center before processing again.");
       }
 
-      const rowsProcessed = estimateRows(file);
-      const rowsIgnored = issues.length;
-      saveOperationalExecution({
-        id: executionId,
-        date: new Date().toISOString(),
-        user: "dashboard-user",
-        durationSeconds: Math.round((performance.now() - startedAt) / 100) / 10,
-        workbookName: file.name,
-        workbookSha256,
-        rowsProcessed,
-        rowsIgnored,
-        status: "succeeded",
-        stage: "Dashboard refresh",
-        validationIssues: issues,
-      });
+      setStage("Processing");
+      setProgress(40);
+      await enterpriseApi.runPipeline(file);
+      setStage("Persistence");
+      setProgress(70);
+      setStage("Reconciliation");
+      setProgress(85);
+      setStage("Dashboard refresh");
+      setProgress(100);
       await onComplete();
       notify({
         type: "success",
@@ -89,28 +73,6 @@ export function PipelineRunner({ onComplete }: { onComplete: () => Promise<void>
     } catch (error) {
       const message = error instanceof Error ? error.message : "Pipeline execution could not be completed.";
       setFriendlyError(message);
-      saveOperationalExecution({
-        id: executionId,
-        date: new Date().toISOString(),
-        user: "dashboard-user",
-        durationSeconds: Math.round((performance.now() - startedAt) / 100) / 10,
-        workbookName: file.name,
-        workbookSha256: await sha256File(file),
-        rowsProcessed: 0,
-        rowsIgnored: 1,
-        status: "failed",
-        stage,
-        validationIssues: [
-          ...validateWorkbook(file, executionId),
-          {
-            id: `${executionId}-run`,
-            executionId,
-            type: "error",
-            message,
-            createdAt: new Date().toISOString(),
-          },
-        ],
-      });
       notify({ type: "error", title: "Pipeline failed", message });
     } finally {
       setRunning(false);

@@ -98,6 +98,12 @@ function authHeaders() {
   return headers;
 }
 
+function authHeadersWithoutContentType() {
+  const headers = authHeaders();
+  delete headers["Content-Type"];
+  return headers;
+}
+
 async function request<T>(path: string, secured = true): Promise<ApiEnvelope<T>> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     headers: secured ? authHeaders() : { "Content-Type": "application/json" },
@@ -134,6 +140,23 @@ export const enterpriseApi = {
     request<{ executions: PipelineExecutionSummary[] }>(`/pipeline/history?limit=${limit}`),
   pipelineExecution: (executionId: string) =>
     request<{ execution: PipelineExecutionDetail }>(`/pipeline/${executionId}`),
+  runPipeline: async (workbook: File) => {
+    const body = new FormData();
+    body.append("workbook", workbook);
+    const response = await fetch(`${apiBaseUrl}/pipeline/run`, {
+      method: "POST",
+      headers: authHeadersWithoutContentType(),
+      body,
+    });
+    if (response.status === 401) {
+      redirectToLogin();
+      throw new AuthSessionExpiredError();
+    }
+    if (!response.ok) {
+      throw new Error(`Pipeline failed with status ${response.status}`);
+    }
+    return response.json() as Promise<ApiEnvelope<{ execution: PipelineExecutionDetail }>>;
+  },
   dre: (company?: string, period?: string) => {
     if (company && period) return request<DreResponse>(`/financial/dre/${company}/${period}`);
     if (company) return request<DreResponse>(`/financial/dre/${company}`);

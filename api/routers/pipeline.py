@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 
 from api.dependencies import get_pipeline_service
 from api.schemas.pipeline import (
@@ -22,6 +22,14 @@ def history(
 ) -> PipelineHistoryAPIResponse:
     request = PipelineHistoryRequest(limit=limit)
     return service.history(limit=request.limit)
+
+
+@router.post("/run", response_model=PipelineExecutionAPIResponse, summary="Run accounting pipeline")
+def run_pipeline(
+    workbook: UploadFile = File(...),
+    service: PipelineService = Depends(get_pipeline_service),
+) -> PipelineExecutionAPIResponse:
+    return service.run_uploaded_workbook(workbook)
 
 
 @router.get("/{execution_id}", response_model=PipelineExecutionAPIResponse, summary="Get pipeline execution")
