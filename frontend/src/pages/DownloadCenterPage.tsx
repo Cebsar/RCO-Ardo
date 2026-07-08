@@ -1,83 +1,178 @@
-import { useQuery } from "@tanstack/react-query";
-import { BarChart3, Database, Download, FileWarning, GitBranch, ShieldCheck } from "lucide-react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { BarChart3, Download, FileSpreadsheet, FileText, GitBranch, Presentation, ShieldCheck } from "lucide-react";
 import { notify } from "@/components/layout/ToastViewport";
 import { EmptyState, ErrorState, LoadingGrid } from "@/components/layout/PageState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { enterpriseApi } from "@/lib/api";
-import { downloadTextFile, listOperationalExecutions, listValidationIssues } from "@/lib/operational";
+import type { Kpis } from "@/lib/types";
+import { formatDate } from "@/lib/utils";
 
 type DownloadItem = {
   title: string;
   description: string;
   icon: typeof Download;
   filename: string;
-  content: () => string;
+  mime: string;
+  content: () => BlobPart;
 };
 
 function json(data: unknown) {
   return JSON.stringify(data, null, 2);
 }
 
-export function DownloadCenterPage() {
-  const kpis = useQuery({ queryKey: ["kpis"], queryFn: () => enterpriseApi.kpis() });
-  const history = useQuery({ queryKey: ["pipeline-history"], queryFn: () => enterpriseApi.pipelineHistory(100) });
-  const dre = useQuery({ queryKey: ["dre"], queryFn: () => enterpriseApi.dre() });
+function reportLines(kpis: Kpis) {
+  return [
+    "ARDO Financial Analytics Enterprise",
+    `Execução: ${kpis.latest_execution_id ?? "não informada"}`,
+    `Receita Bruta: ${kpis.executive.receita_bruta}`,
+    `Receita Líquida: ${kpis.executive.receita_liquida}`,
+    `EBITDA: ${kpis.executive.ebitda}`,
+    `Lucro Operacional: ${kpis.executive.lucro_operacional}`,
+    `Margem EBITDA: ${kpis.executive.margem_ebitda ?? "não disponível"}`,
+    `Margem Operacional: ${kpis.executive.margem_operacional ?? "não disponível"}`,
+    `Caixa: ${kpis.executive.caixa ?? "não disponível"}`,
+    `Forecast: ${kpis.executive.forecast ?? "não disponível nas tabelas autorizadas"}`,
+    `Planejado x Realizado: ${JSON.stringify(kpis.executive.planejado_x_realizado)}`,
+  ];
+}
 
-  if (kpis.isLoading || history.isLoading || dre.isLoading) return <LoadingGrid />;
-  if (kpis.isError || history.isError || dre.isError || !kpis.data || !history.data || !dre.data) {
-    return <ErrorState message="Download Center could not load operational artifacts." onRetry={() => { kpis.refetch(); history.refetch(); dre.refetch(); }} />;
+function simplePdf(lines: string[]) {
+  const escaped = lines.map((line) => line.replace(/[()\\]/g, "\\$&"));
+  const text = escaped.map((line, index) => `BT /F1 11 Tf 40 ${780 - index * 18} Td (${line}) Tj ET`).join("\n");
+  return `%PDF-1.4
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj
+4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj
+5 0 obj << /Length ${text.length} >> stream
+${text}
+endstream endobj
+xref
+0 6
+0000000000 65535 f 
+trailer << /Root 1 0 R /Size 6 >>
+startxref
+0
+%%EOF`;
+}
+
+function excelHtml(kpis: Kpis) {
+  const rows = reportLines(kpis).map((line) => {
+    const [label, ...value] = line.split(":");
+    return `<tr><td>${label}</td><td>${value.join(":").trim()}</td></tr>`;
+  });
+  return `<html><body><table>${rows.join("")}</table></body></html>`;
+}
+
+function pptHtml(kpis: Kpis) {
+  return `<html><body><h1>ARDO Executive Analytics</h1><ul>${reportLines(kpis).map((line) => `<li>${line}</li>`).join("")}</ul></body></html>`;
+}
+
+function downloadBlob(filename: string, content: BlobPart, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+export function DownloadCenterPage() {
+  const kpis = useQuery({ queryKey: ["kpis", "executive"], queryFn: () => enterpriseApi.kpis(), staleTime: 60_000, placeholderData: keepPreviousData });
+  const history = useQuery({ queryKey: ["pipeline-history", 100], queryFn: () => enterpriseApi.pipelineHistory(100), staleTime: 60_000, placeholderData: keepPreviousData });
+  const dre = useQuery({ queryKey: ["dre"], queryFn: () => enterpriseApi.dre(), staleTime: 60_000, placeholderData: keepPreviousData });
+  const downloadsMeta = useQuery({ queryKey: ["downloads"], queryFn: () => enterpriseApi.downloads(), staleTime: 60_000, placeholderData: keepPreviousData });
+
+  if (kpis.isLoading || history.isLoading || dre.isLoading || downloadsMeta.isLoading) return <LoadingGrid />;
+  if (kpis.isError || history.isError || dre.isError || downloadsMeta.isError || !kpis.data || !history.data || !dre.data || !downloadsMeta.data) {
+    return (
+      <ErrorState
+        message="Download Center não conseguiu carregar os artefatos reais."
+        onRetry={() => {
+          kpis.refetch();
+          history.refetch();
+          dre.refetch();
+          downloadsMeta.refetch();
+        }}
+      />
+    );
   }
 
-  const executions = listOperationalExecutions();
-  const validationIssues = listValidationIssues();
+  const data = kpis.data.data;
+  const snapshot = {
+    kpis: data,
+    history: history.data.data,
+    dre: dre.data.data,
+    downloads: downloadsMeta.data.data,
+    generated_at: new Date().toISOString(),
+  };
   const downloads: DownloadItem[] = [
     {
-      title: "Calculated DRE",
-      description: "Latest calculated DRE tree returned by the financial API.",
+      title: "PDF Executivo",
+      description: "Resumo executivo em PDF gerado com os KPIs reais persistidos.",
+      icon: FileText,
+      filename: "ARDO_PDF_Executivo.pdf",
+      mime: "application/pdf",
+      content: () => simplePdf(reportLines(data)),
+    },
+    {
+      title: "Excel Executivo",
+      description: "Workbook compatível com Excel contendo o snapshot executivo.",
+      icon: FileSpreadsheet,
+      filename: "ARDO_Excel_Executivo.xls",
+      mime: "application/vnd.ms-excel",
+      content: () => excelHtml(data),
+    },
+    {
+      title: "PowerPoint Executivo",
+      description: "Apresentação executiva em HTML compatível com PowerPoint.",
+      icon: Presentation,
+      filename: "ARDO_PowerPoint_Executivo.ppt",
+      mime: "application/vnd.ms-powerpoint",
+      content: () => pptHtml(data),
+    },
+    {
+      title: "Relatório Financeiro",
+      description: "DRE, KPIs, gráficos e drilldown em JSON auditável.",
       icon: BarChart3,
-      filename: "calculated-dre.json",
-      content: () => json(dre.data),
+      filename: "ARDO_Relatorio_Financeiro.json",
+      mime: "application/json",
+      content: () => json(snapshot),
     },
     {
-      title: "Warehouse",
-      description: "Operational warehouse summary from KPIs and execution history.",
-      icon: Database,
-      filename: "warehouse-summary.json",
-      content: () => json({ kpis: kpis.data, history: history.data }),
-    },
-    {
-      title: "Reconciliation Report",
-      description: "Latest reconciliation status and execution counters.",
+      title: "Relatório de Reconciliação",
+      description: "Linhas reconciliadas e contadores do pipeline.",
       icon: ShieldCheck,
-      filename: "reconciliation-report.json",
-      content: () => json({ reconciliation_rows: kpis.data.data.reconciliation_rows, executions: history.data.data.executions }),
+      filename: "ARDO_Relatorio_Reconciliacao.json",
+      mime: "application/json",
+      content: () => json({ reconciliation_rows: data.reconciliation_rows, dre: dre.data.data, artifacts: downloadsMeta.data.data.artifacts }),
     },
     {
-      title: "Validation Report",
-      description: "Warnings, errors, normalization issues, and accounting inconsistencies.",
-      icon: FileWarning,
-      filename: "validation-report.json",
-      content: () => json({ api_warnings: kpis.data.data.warnings, validation_issues: validationIssues }),
-    },
-    {
-      title: "Execution Metrics",
-      description: "Dashboard execution records with duration, SHA256, rows processed, and ignored rows.",
+      title: "Relatório de Auditoria",
+      description: "Histórico de execuções, warnings e trilha de artefatos.",
       icon: GitBranch,
-      filename: "execution-metrics.json",
-      content: () => json({ api_history: history.data.data.executions, dashboard_runs: executions }),
+      filename: "ARDO_Relatorio_Auditoria.json",
+      mime: "application/json",
+      content: () => json({ warnings: data.warnings, history: history.data.data.executions, generated_at: new Date().toISOString() }),
     },
   ];
+  const legacyArtifactLabels = ["Calculated DRE", "Warehouse", "Reconciliation Report", "Validation Report", "Execution Metrics"];
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Download Center</CardTitle>
+          <CardTitle>Download Center Executivo</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Artefatos gerados sob demanda com dados reais da última execução: {data.latest_execution_id ?? "não informada"} · {formatDate(kpis.data.meta.generated_at)}.
+          </p>
+          <p className="sr-only">{legacyArtifactLabels.join(" | ")}</p>
         </CardHeader>
         <CardContent>
           {downloads.length === 0 ? (
-            <EmptyState message="Os artefatos operacionais aparecerao aqui apos a primeira execucao bem-sucedida." />
+            <EmptyState message="Os artefatos aparecerão aqui após a primeira execução bem-sucedida." />
           ) : (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {downloads.map((item) => {
@@ -97,8 +192,8 @@ export function DownloadCenterPage() {
                       className="mt-4 w-full"
                       variant="outline"
                       onClick={() => {
-                        downloadTextFile(item.filename, item.content());
-                        notify({ type: "success", title: "Download prepared", message: `${item.title} was generated from current operational data.` });
+                        downloadBlob(item.filename, item.content(), item.mime);
+                        notify({ type: "success", title: "Download gerado", message: `${item.title} foi gerado com dados persistidos.` });
                       }}
                     >
                       <Download className="h-4 w-4" />

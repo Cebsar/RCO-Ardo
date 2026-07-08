@@ -32,6 +32,78 @@ export type Kpis = {
   average_duration_seconds: number;
   latest_execution_id: string | null;
   warnings: string[];
+  executive: ExecutiveAnalytics;
+  charts: ExecutiveCharts;
+  drilldown: ExecutiveDrilldown;
+  pagination: {
+    entries_limit: number;
+    entries_returned: number;
+  };
+};
+
+export type ExecutiveAnalytics = {
+  receita_bruta: number;
+  receita_liquida: number;
+  ebitda: number;
+  lucro_operacional: number;
+  margem_ebitda: number | null;
+  margem_operacional: number | null;
+  caixa: number | null;
+  forecast: number | null;
+  planejado_x_realizado: {
+    planejado: number | null;
+    realizado: number | null;
+    variacao: number | null;
+  };
+  latest_execution_id: string | null;
+};
+
+export type ChartPoint = {
+  name?: string;
+  period?: string;
+  value: number;
+  records?: number;
+  code?: string;
+};
+
+export type ExecutiveCharts = {
+  receita_mensal: ChartPoint[];
+  ebitda_mensal: ChartPoint[];
+  receita_por_empresa: ChartPoint[];
+  receita_por_divisao: ChartPoint[];
+  receita_por_centro_custo: ChartPoint[];
+  evolucao_caixa: ChartPoint[];
+  waterfall_dre: ChartPoint[];
+};
+
+export type DrilldownEntry = {
+  entry_id: string;
+  date: string;
+  description: string | null;
+  amount: number;
+  entry_type: string;
+  currency: string;
+};
+
+export type ExecutiveDrilldown = {
+  companies: Array<{
+    name: string;
+    divisions: Array<{
+      name: string;
+      cost_centers: Array<{
+        name: string;
+        synthetic_accounts: Array<{
+          code: string;
+          name: string;
+          analytical_accounts: Array<{
+            code: string;
+            name: string;
+            entries: DrilldownEntry[];
+          }>;
+        }>;
+      }>;
+    }>;
+  }>;
 };
 
 export type PipelineExecutionSummary = {

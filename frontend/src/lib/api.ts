@@ -140,6 +140,7 @@ export const enterpriseApi = {
     request<{ executions: PipelineExecutionSummary[] }>(`/pipeline/history?limit=${limit}`),
   pipelineExecution: (executionId: string) =>
     request<{ execution: PipelineExecutionDetail }>(`/pipeline/${executionId}`),
+  downloads: () => request<{ latest_execution_id: string | null; artifacts: Array<Record<string, unknown>> }>("/downloads"),
   runPipeline: async (workbook: File) => {
     const body = new FormData();
     body.append("workbook", workbook);

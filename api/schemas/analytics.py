@@ -33,6 +33,10 @@ class KPIResponse(BaseModel):
     average_duration_seconds: float = 0.0
     latest_execution_id: str | None = None
     warnings: list[str] = Field(default_factory=list)
+    executive: dict = Field(default_factory=dict)
+    charts: dict = Field(default_factory=dict)
+    drilldown: dict = Field(default_factory=dict)
+    pagination: dict = Field(default_factory=dict)
 
 
 class KPIAPIResponse(APIResponse):
