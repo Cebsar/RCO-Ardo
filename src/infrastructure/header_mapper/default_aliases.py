@@ -13,6 +13,14 @@ CANONICAL_FIELDS: List[str] = [
     "Debit",
     "Credit",
     "Balance",
+    "Month",
+    "Year",
+    "Group",
+    "DREGroup",
+    "BatchNumber",
+    "PostingNumber",
+    "Title",
+    "Counterparty",
 ]
 
 DEFAULT_ALIASES: Dict[str, List[str]] = {
@@ -27,4 +35,12 @@ DEFAULT_ALIASES: Dict[str, List[str]] = {
     "Debit": ["debit", "debito", "débito", "dr"],
     "Credit": ["credit", "credito", "crédito", "cr"],
     "Balance": ["balance", "saldo", "bal", "valor"],
+    "Month": ["month", "mes", "mês"],
+    "Year": ["year", "ano"],
+    "Group": ["group", "grupo"],
+    "DREGroup": ["dre", "dre group", "grupo dre"],
+    "BatchNumber": ["batch", "batchnumber", "lote"],
+    "PostingNumber": ["posting", "postingnumber", "lancamento", "lançamento"],
+    "Title": ["title", "titulo", "título"],
+    "Counterparty": ["counterparty", "contra partida", "contrapartida"],
 }

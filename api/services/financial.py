@@ -11,12 +11,14 @@ class FinancialService:
         self.repository = repository
 
     def dre(self, *, company: str | None = None, period: str | None = None) -> DRETreeAPIResponse:
+        persisted_nodes = self.repository.list_dre_nodes(company=company, period=period)
+        rel_razao_amounts = self.repository.rel_razao_amounts(persisted_nodes, company=company, period=period)
         nodes = [
             DRERow(
                 node_code=row.node_code,
                 node_name=row.node_name,
                 level=row.level,
-                amount=row.amount,
+                amount=rel_razao_amounts.get(row.node_code, 0),
                 currency=row.currency,
                 percentage=row.percentage,
                 parent_node_code=row.parent_node_code,
@@ -24,7 +26,7 @@ class FinancialService:
                 rule_id=row.rule_id,
                 payload=row.payload,
             )
-            for row in self.repository.list_dre_nodes(company=company, period=period)
+            for row in persisted_nodes
         ]
         return DRETreeAPIResponse(
             data=DRETreeResponse(filters=DREFilter(company=company, period=period), nodes=nodes),

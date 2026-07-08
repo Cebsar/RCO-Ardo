@@ -56,7 +56,17 @@ def build_client(tmp_path) -> TestClient:
                 currency="BRL",
                 entry_type="credit",
                 accounting_date=datetime(2026, 6, 30).date(),
-                source_row={},
+                source_month=6,
+                source_year=2026,
+                source_company="0001 - ARDO",
+                group_name="GRUPO ARDO",
+                division_name="USINA",
+                dre_group="Receita Bruta",
+                cost_center_name="CC-001",
+                debit_amount=Decimal("0.00"),
+                credit_amount=Decimal("100.00"),
+                source_value=Decimal("100.00"),
+                source_row={"company": "GRUPO ARDO", "division": "USINA", "cost_center": "CC-001"},
             )
         )
         session.add(
@@ -156,3 +166,14 @@ def test_api_exposes_pipeline_financial_and_analytics_endpoints(tmp_path):
     assert kpis.status_code == 200
     assert kpis.json()["data"]["pipeline_executions"] == 1
     assert kpis.json()["data"]["latest_execution_id"] == "exec-1"
+    assert kpis.json()["data"]["filter_options"] == {
+        "companies": ["GRUPO ARDO"],
+        "divisions": ["USINA"],
+        "cost_centers": ["CC-001"],
+        "periods": ["202606"],
+        "years": ["2026"],
+        "accounts": ["4000"],
+        "synthetic_accounts": ["4000"],
+        "analytical_accounts": ["Revenue"],
+        "dre_groups": ["Receita Bruta"],
+    }

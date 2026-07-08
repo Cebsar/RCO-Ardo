@@ -29,8 +29,8 @@ export function DataTable<T>({
   });
 
   return (
-    <div className="executive-panel overflow-hidden rounded-lg">
-      <div className="overflow-x-auto">
+    <div className="executive-panel premium-card overflow-hidden rounded-lg">
+      <div className="max-h-[680px] overflow-auto">
         <table className="w-full min-w-[760px] text-sm">
           <thead className="bg-muted/70 text-muted-foreground">
             {table.getHeaderGroups().map((headerGroup) => (

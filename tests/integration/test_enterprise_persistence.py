@@ -66,6 +66,13 @@ def make_entry() -> AccountingEntry:
         date=date(2026, 6, 30),
         entry_type=EntryType.CREDIT,
         description="Integration entry",
+        source_fields={
+            "month": 6, "year": 2026, "company": "0001 - ARDO", "group": "ARDO",
+            "division": "USINA", "dre_group": "Receita Bruta", "account_description": "Revenue",
+            "account_code": "4000", "cost_center": "2 - USINA", "batch_number": "1108",
+            "posting_number": "42", "title": "NF-1", "history": "Venda", "counterparty": "Cliente",
+            "debit": 0, "credit": Decimal("123.45"), "value": Decimal("123.45"),
+        },
     )
 
 
@@ -137,6 +144,11 @@ def test_enterprise_persistence_layer_persists_required_artifacts(tmp_path):
     assert persisted.metrics_rows == 3
     assert accounting[0].entry_id == "entry-1"
     assert accounting[0].account_code == "4000"
+    assert accounting[0].group_name == "ARDO"
+    assert accounting[0].dre_group == "Receita Bruta"
+    assert accounting[0].source_month == 6
+    assert accounting[0].source_year == 2026
+    assert accounting[0].source_value == Decimal("123.45")
     assert len(dre) == 2
     assert reconciliation[0].node_code == "4"
     assert {metric.scope for metric in metrics} == {

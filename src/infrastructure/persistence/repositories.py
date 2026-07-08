@@ -53,6 +53,7 @@ class AccountingEntryRepository:
         rows: list[FactAccountingEntryORM] = []
         for entry in entries:
             amount = getattr(entry, "amount", None)
+            gx = dict(getattr(entry, "source_fields", {}) or {})
             row = FactAccountingEntryORM(
                 pipeline_execution_id=pipeline_execution_id,
                 entry_id=str(entry.id),
@@ -64,6 +65,7 @@ class AccountingEntryRepository:
                 entry_type=enum_value(entry.entry_type),
                 accounting_date=entry.date,
                 description=getattr(entry, "description", None),
+                **self._gx_columns(gx),
                 source_row=json_safe(entry),
             )
             self.session.add(row)
@@ -75,6 +77,7 @@ class AccountingEntryRepository:
         rows: list[FactAccountingEntryORM] = []
         for fact in facts:
             entry = getattr(fact, "source_entry", None)
+            gx = dict(getattr(entry, "source_fields", {}) or {}) if entry is not None else {}
             row = FactAccountingEntryORM(
                 pipeline_execution_id=pipeline_execution_id,
                 entry_id=str(fact.entry_id),
@@ -91,12 +94,53 @@ class AccountingEntryRepository:
                 entry_type=str(getattr(fact, "entry_type", "")),
                 accounting_date=fact.accounting_date,
                 description=getattr(fact, "description", None),
+                **self._gx_columns(gx),
                 source_row=json_safe(getattr(fact, "source_row", {})),
             )
             self.session.add(row)
             rows.append(row)
         self.session.flush()
         return rows
+
+    @staticmethod
+    def _gx_columns(gx: dict[str, Any]) -> dict[str, Any]:
+        def text(key: str) -> str | None:
+            value = gx.get(key)
+            return None if value in (None, "") else str(value).strip()
+
+        def integer(key: str) -> int | None:
+            value = gx.get(key)
+            try:
+                return int(value) if value not in (None, "") else None
+            except (TypeError, ValueError):
+                return None
+
+        def number(key: str):
+            value = gx.get(key)
+            if value in (None, "", "-"):
+                return None
+            try:
+                return decimal_or_none(value)
+            except Exception:
+                return None
+
+        return {
+            "source_company": text("company"),
+            "group_name": text("group"),
+            "division_name": text("division"),
+            "dre_group": text("dre_group"),
+            "cost_center_name": text("cost_center"),
+            "source_month": integer("month"),
+            "source_year": integer("year"),
+            "batch_number": text("batch_number"),
+            "posting_number": text("posting_number"),
+            "document_title": text("title"),
+            "history": text("history"),
+            "counterparty": text("counterparty"),
+            "debit_amount": number("debit"),
+            "credit_amount": number("credit"),
+            "source_value": number("value"),
+        }
 
     def list_by_execution(self, pipeline_execution_id: str) -> list[FactAccountingEntryORM]:
         stmt = select(FactAccountingEntryORM).where(FactAccountingEntryORM.pipeline_execution_id == pipeline_execution_id)

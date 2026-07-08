@@ -39,6 +39,25 @@ export type Kpis = {
     entries_limit: number;
     entries_returned: number;
   };
+  filter_options: {
+    companies: string[];
+    divisions: string[];
+    cost_centers: string[];
+    periods: string[];
+    years: string[];
+    accounts: string[];
+    synthetic_accounts: string[];
+    analytical_accounts: string[];
+    dre_groups: string[];
+  };
+  source_validation: {
+    entries: number;
+    total: number;
+    by_company: ChartPoint[];
+    by_division: ChartPoint[];
+    by_cost_center: ChartPoint[];
+    by_account: ChartPoint[];
+  };
 };
 
 export type ExecutiveAnalytics = {
@@ -83,6 +102,9 @@ export type DrilldownEntry = {
   amount: number;
   entry_type: string;
   currency: string;
+  debit?: number;
+  credit?: number;
+  document?: string | null;
 };
 
 export type ExecutiveDrilldown = {

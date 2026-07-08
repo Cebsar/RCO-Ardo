@@ -37,6 +37,8 @@ class KPIResponse(BaseModel):
     charts: dict = Field(default_factory=dict)
     drilldown: dict = Field(default_factory=dict)
     pagination: dict = Field(default_factory=dict)
+    filter_options: dict[str, list[str]] = Field(default_factory=dict)
+    source_validation: dict = Field(default_factory=dict)
 
 
 class KPIAPIResponse(APIResponse):

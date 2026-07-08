@@ -91,6 +91,7 @@ class FactBuilder:
                 "division": entry.cost_center.division.code.value if entry.cost_center and entry.cost_center.division else None,
                 "cost_center": entry.cost_center.code.value if entry.cost_center else None,
                 "entry_id": entry.id,
+                "rel_razao_gx": dict(getattr(entry, "source_fields", {}) or {}),
             },
             source_entry=entry,
         )

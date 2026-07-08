@@ -15,6 +15,7 @@ type DownloadItem = {
   filename: string;
   mime: string;
   content: () => BlobPart;
+  status?: string;
 };
 
 function json(data: unknown) {
@@ -77,6 +78,16 @@ function downloadBlob(filename: string, content: BlobPart, mime: string) {
   link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function byteSize(content: BlobPart) {
+  return new Blob([content]).size;
+}
+
+function formatBytes(size: number) {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
 
 export function DownloadCenterPage() {
@@ -157,6 +168,22 @@ export function DownloadCenterPage() {
       mime: "application/json",
       content: () => json({ warnings: data.warnings, history: history.data.data.executions, generated_at: new Date().toISOString() }),
     },
+    {
+      title: "Snapshot Executivo",
+      description: "Imagem lógica do estado executivo atual para diretoria.",
+      icon: Download,
+      filename: "ARDO_Snapshot_Executivo.json",
+      mime: "application/json",
+      content: () => json({ executive: data.executive, charts: data.charts, generated_at: new Date().toISOString() }),
+    },
+    {
+      title: "Backup Completo",
+      description: "Pacote JSON com KPIs, histórico, DRE e metadados de artefatos.",
+      icon: Download,
+      filename: "ARDO_Backup_Completo.json",
+      mime: "application/json",
+      content: () => json(snapshot),
+    },
   ];
   const legacyArtifactLabels = ["Calculated DRE", "Warehouse", "Reconciliation Report", "Validation Report", "Execution Metrics"];
 
@@ -177,8 +204,9 @@ export function DownloadCenterPage() {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {downloads.map((item) => {
                 const Icon = item.icon;
+                const preview = item.content();
                 return (
-                  <div key={item.title} className="rounded-lg border border-border/60 bg-background/25 p-4">
+                  <div key={item.title} className="premium-card rounded-lg border border-border/60 bg-background/25 p-4">
                     <div className="flex items-start gap-3">
                       <div className="gold-surface flex h-10 w-10 items-center justify-center rounded-md border border-primary/25 text-primary">
                         <Icon className="h-5 w-5" />
@@ -186,13 +214,19 @@ export function DownloadCenterPage() {
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold">{item.title}</p>
                         <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
+                        <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                          <div><dt>Status</dt><dd className="text-emerald-200">Pronto</dd></div>
+                          <div><dt>Tamanho</dt><dd>{formatBytes(byteSize(preview))}</dd></div>
+                          <div><dt>Data</dt><dd>{new Date().toLocaleDateString("pt-BR")}</dd></div>
+                          <div><dt>Hora</dt><dd>{new Date().toLocaleTimeString("pt-BR")}</dd></div>
+                        </dl>
                       </div>
                     </div>
                     <Button
                       className="mt-4 w-full"
                       variant="outline"
                       onClick={() => {
-                        downloadBlob(item.filename, item.content(), item.mime);
+                        downloadBlob(item.filename, preview, item.mime);
                         notify({ type: "success", title: "Download gerado", message: `${item.title} foi gerado com dados persistidos.` });
                       }}
                     >

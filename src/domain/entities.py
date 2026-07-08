@@ -60,6 +60,7 @@ class AccountingEntry:
     cost_center: Optional[CostCenter] = None
     description: Optional[str] = None
     company: Optional[Company] = None
+    source_fields: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

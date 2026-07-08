@@ -16,12 +16,14 @@ from api.services.pipeline import PipelineService
 from api.services.system import SystemService
 from src.infrastructure.persistence.database import DatabaseConfig, create_engine_from_config, create_session_factory
 from src.infrastructure.persistence.models import Base
+from src.infrastructure.persistence.migrations import migrate_rel_razao_gx
 
 
 @lru_cache(maxsize=1)
 def get_session_factory() -> sessionmaker[Session]:
     engine = create_engine_from_config(DatabaseConfig.from_env())
     Base.metadata.create_all(engine)
+    migrate_rel_razao_gx(engine)
     return create_session_factory(engine)
 
 

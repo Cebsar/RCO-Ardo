@@ -177,6 +177,25 @@ class RowNormalizer:
                 "Division": self._text_or_none(canonical.get("Division")),
                 "CostCenter": self._text_or_none(canonical.get("CostCenter")),
                 "Description": self._text_or_none(canonical.get("History")) or self._text_or_none(canonical.get("DocumentNumber")),
+                "SourceFields": {
+                    "month": canonical.get("Month"),
+                    "year": canonical.get("Year"),
+                    "company": canonical.get("Company"),
+                    "group": canonical.get("Group"),
+                    "division": canonical.get("Division"),
+                    "dre_group": canonical.get("DREGroup"),
+                    "account_description": canonical.get("AccountDescription"),
+                    "account_code": canonical.get("AccountCode"),
+                    "cost_center": canonical.get("CostCenter"),
+                    "batch_number": canonical.get("BatchNumber"),
+                    "posting_number": canonical.get("PostingNumber") or canonical.get("DocumentNumber"),
+                    "title": canonical.get("Title"),
+                    "history": canonical.get("History"),
+                    "counterparty": canonical.get("Counterparty"),
+                    "debit": debit_raw,
+                    "credit": credit_raw,
+                    "value": balance_raw if balance_raw not in (None, "") else amount,
+                },
             }
 
             return normalized, None
@@ -236,6 +255,7 @@ class EntryFactory:
             cost_center=cost_center,
             description=description,
             company=company,
+            source_fields=normalized.get("SourceFields") or {},
         )
 
     def _split_code_name(self, value: str) -> tuple[str, str]:

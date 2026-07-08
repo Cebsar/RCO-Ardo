@@ -7,6 +7,7 @@ from sqlalchemy import Engine
 
 from .database import DatabaseConfig, create_engine_from_config, create_session_factory
 from .models import Base
+from .migrations import migrate_rel_razao_gx
 from .repositories import UnitOfWork
 
 
@@ -26,6 +27,7 @@ class EnterprisePersistenceService:
 
     def create_database(self) -> None:
         Base.metadata.create_all(self.engine)
+        migrate_rel_razao_gx(self.engine)
 
     def persist_pipeline_run(
         self,
