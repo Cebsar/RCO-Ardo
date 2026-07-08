@@ -8,10 +8,10 @@ import { listValidationIssues, type ValidationIssue } from "@/lib/operational";
 import { formatDate, formatNumber } from "@/lib/utils";
 
 const issueConfig = {
-  warning: { label: "Warnings", icon: AlertTriangle, className: "border-amber-200 bg-amber-50 text-amber-800" },
+  warning: { label: "Warnings", icon: AlertTriangle, className: "border-primary/35 bg-accent/70 text-accent-foreground" },
   error: { label: "Errors", icon: Ban, className: "border-destructive/30 bg-destructive/10 text-destructive" },
-  normalization: { label: "Normalization issues", icon: RotateCcw, className: "border-sky-200 bg-sky-50 text-sky-800" },
-  accounting: { label: "Accounting inconsistencies", icon: Sigma, className: "border-violet-200 bg-violet-50 text-violet-800" },
+  normalization: { label: "Normalization issues", icon: RotateCcw, className: "border-primary/25 bg-secondary text-secondary-foreground" },
+  accounting: { label: "Accounting inconsistencies", icon: Sigma, className: "border-primary/25 bg-secondary text-secondary-foreground" },
 } satisfies Record<ValidationIssue["type"], { label: string; icon: typeof AlertTriangle; className: string }>;
 
 function issueCount(issues: ValidationIssue[], type: ValidationIssue["type"]) {
@@ -46,7 +46,7 @@ export function ValidationCenterPage() {
                   <p className="text-sm text-muted-foreground">{config.label}</p>
                   <p className="mt-2 text-2xl font-semibold">{formatNumber(issueCount(issues, type))}</p>
                 </div>
-                <div className="flex h-11 w-11 items-center justify-center rounded-md bg-secondary text-secondary-foreground">
+                <div className="gold-surface flex h-11 w-11 items-center justify-center rounded-md border border-primary/25 text-primary">
                   <Icon className="h-5 w-5" />
                 </div>
               </CardContent>
@@ -60,11 +60,11 @@ export function ValidationCenterPage() {
         </CardHeader>
         <CardContent>
           {issues.length === 0 ? (
-            <EmptyState title="No validation issues" message="No warnings, errors, normalization issues, or accounting inconsistencies are currently reported." />
+            <EmptyState message="Nao ha avisos, erros, normalizacoes ou inconsistencias contabeis reportadas." />
           ) : (
             <div className="grid gap-3">
               {issues.map((issue) => (
-                <div key={issue.id} className="rounded-lg border p-4">
+                <div key={issue.id} className="rounded-lg border border-border/60 bg-background/25 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <Badge className={issueConfig[issue.type].className}>{issueConfig[issue.type].label}</Badge>
                     <span className="text-xs text-muted-foreground">{formatDate(issue.createdAt)}</span>

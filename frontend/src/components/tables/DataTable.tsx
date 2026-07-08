@@ -29,14 +29,14 @@ export function DataTable<T>({
   });
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
+    <div className="executive-panel overflow-hidden rounded-lg">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] text-sm">
-          <thead className="bg-muted/70">
+          <thead className="bg-muted/70 text-muted-foreground">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <th key={header.id} className="px-4 py-3 text-left font-semibold">
+                  <th key={header.id} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em]">
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
                 ))}
@@ -47,7 +47,7 @@ export function DataTable<T>({
             {table.getRowModel().rows.map((row) => (
               <tr
                 key={row.id}
-                className={cn("border-t", onRowClick && "cursor-pointer hover:bg-muted/50")}
+                className={cn("border-t border-border/45", onRowClick && "cursor-pointer hover:bg-accent/25")}
                 onClick={() => onRowClick?.(row.original)}
               >
                 {row.getVisibleCells().map((cell) => (

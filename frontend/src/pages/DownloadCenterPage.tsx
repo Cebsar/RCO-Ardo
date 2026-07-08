@@ -77,15 +77,15 @@ export function DownloadCenterPage() {
         </CardHeader>
         <CardContent>
           {downloads.length === 0 ? (
-            <EmptyState title="No downloads available" message="Operational artifacts will appear here after the first successful execution." />
+            <EmptyState message="Os artefatos operacionais aparecerao aqui apos a primeira execucao bem-sucedida." />
           ) : (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {downloads.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.title} className="rounded-lg border p-4">
+                  <div key={item.title} className="rounded-lg border border-border/60 bg-background/25 p-4">
                     <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-md bg-secondary text-secondary-foreground">
+                      <div className="gold-surface flex h-10 w-10 items-center justify-center rounded-md border border-primary/25 text-primary">
                         <Icon className="h-5 w-5" />
                       </div>
                       <div className="min-w-0 flex-1">

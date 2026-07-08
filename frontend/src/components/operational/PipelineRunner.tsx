@@ -1,4 +1,4 @@
-import { Play, UploadCloud } from "lucide-react";
+import { CheckCircle2, Circle, Play, UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
 import { notify } from "@/components/layout/ToastViewport";
 import { Button } from "@/components/ui/button";
@@ -82,7 +82,7 @@ export function PipelineRunner({ onComplete }: { onComplete: () => Promise<void>
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Pipeline Execution</CardTitle>
+        <CardTitle>Pipeline Timeline</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -97,8 +97,8 @@ export function PipelineRunner({ onComplete }: { onComplete: () => Promise<void>
             <UploadCloud className="h-4 w-4" />
             Upload workbook
           </Button>
-          <div className="min-w-0 flex-1 text-sm text-muted-foreground">
-            {file ? <span className="block truncate">{file.name}</span> : "No workbook selected"}
+          <div className="min-w-0 flex-1 rounded-md border border-border/60 bg-background/35 px-3 py-2 text-sm text-muted-foreground">
+            {file ? <span className="block truncate text-foreground">{file.name}</span> : "Nenhum workbook selecionado"}
           </div>
           <Button onClick={runPipeline} disabled={running}>
             <Play className="h-4 w-4" />
@@ -113,11 +113,20 @@ export function PipelineRunner({ onComplete }: { onComplete: () => Promise<void>
           <Progress value={progress} />
         </div>
         <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3 lg:grid-cols-6">
-          {stages.map((item) => (
-            <span key={item} className={item === stage ? "font-semibold text-foreground" : undefined}>
-              {item}
-            </span>
-          ))}
+          {stages.map((item) => {
+            const itemIndex = stages.indexOf(item);
+            const stageIndex = stages.indexOf(stage);
+            const complete = progress === 100 || itemIndex < stageIndex;
+            const active = item === stage;
+            return (
+              <div key={item} className={active ? "rounded-md border border-primary/35 bg-accent/35 p-2 font-semibold text-foreground" : "rounded-md border border-border/45 bg-background/25 p-2"}>
+                <span className="flex items-center gap-2">
+                  {complete ? <CheckCircle2 className="h-3.5 w-3.5 text-primary" /> : <Circle className="h-3.5 w-3.5" />}
+                  {item}
+                </span>
+              </div>
+            );
+          })}
         </div>
         {friendlyError ? <p className="text-sm text-destructive">{friendlyError}</p> : null}
       </CardContent>

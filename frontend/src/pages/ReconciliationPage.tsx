@@ -38,7 +38,7 @@ export function ReconciliationPage() {
         ]}
       />
       {executions.length === 0 ? (
-        <EmptyState title="No reconciliation history" message="No persisted executions are available for reconciliation review." />
+        <EmptyState message="Nao ha execucoes persistidas disponiveis para revisao de conciliacao." />
       ) : (
         <DataTable columns={columns} data={executions} />
       )}

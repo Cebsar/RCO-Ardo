@@ -70,7 +70,7 @@ export function AuthPanel() {
   }
 
   return (
-    <div id="login" ref={panelRef} className="grid gap-2 rounded-lg border bg-card p-3 md:grid-cols-[1fr_1fr_auto_1fr_auto_auto]">
+    <div id="login" ref={panelRef} className="executive-panel grid gap-2 rounded-lg p-3 md:grid-cols-[1fr_1fr_auto_1fr_auto_auto]">
       <Input placeholder="Username" value={username} onChange={(event) => setUsername(event.target.value)} />
       <Input placeholder="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
       <Button variant={hasToken ? "secondary" : "default"} onClick={() => login.mutate()} disabled={login.isPending}>
@@ -86,13 +86,13 @@ export function AuthPanel() {
         <LogOut className="h-4 w-4" />
       </Button>
       {authMessage ? (
-        <p className={`md:col-span-6 text-sm ${authMessageKind === "error" ? "text-destructive" : "text-emerald-700"}`}>
+        <p className={`md:col-span-6 text-sm ${authMessageKind === "error" ? "text-destructive" : "text-primary"}`}>
           {authMessage}
         </p>
       ) : null}
       <p className="md:col-span-6 flex items-center gap-2 text-xs text-muted-foreground">
         <KeyRound className="h-3.5 w-3.5" />
-        JWT sessions use browser session storage. Internal API keys remain available for trusted service access.
+        Sessao JWT no armazenamento do navegador. A chave interna segue disponivel para acesso de servico confiavel.
       </p>
     </div>
   );

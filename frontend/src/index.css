@@ -4,23 +4,23 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 224 30% 12%;
-    --card: 0 0% 100%;
-    --card-foreground: 224 30% 12%;
-    --primary: 199 89% 30%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 160 28% 90%;
-    --secondary-foreground: 170 45% 18%;
-    --muted: 220 14% 94%;
-    --muted-foreground: 222 10% 43%;
-    --accent: 43 84% 88%;
-    --accent-foreground: 39 92% 18%;
-    --destructive: 0 74% 44%;
+    --background: 222 22% 7%;
+    --foreground: 42 28% 92%;
+    --card: 220 18% 11%;
+    --card-foreground: 42 28% 92%;
+    --primary: 42 78% 56%;
+    --primary-foreground: 220 24% 8%;
+    --secondary: 220 14% 17%;
+    --secondary-foreground: 42 40% 88%;
+    --muted: 220 13% 16%;
+    --muted-foreground: 42 12% 64%;
+    --accent: 42 54% 19%;
+    --accent-foreground: 42 76% 72%;
+    --destructive: 0 68% 56%;
     --destructive-foreground: 0 0% 100%;
-    --border: 218 18% 86%;
-    --input: 218 18% 86%;
-    --ring: 199 89% 30%;
+    --border: 42 18% 24%;
+    --input: 220 13% 18%;
+    --ring: 42 78% 56%;
     --radius: 0.5rem;
   }
 
@@ -31,5 +31,24 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:
+      radial-gradient(circle at 20% -10%, hsl(42 70% 18% / 0.22), transparent 34rem),
+      linear-gradient(145deg, hsl(224 25% 6%), hsl(216 18% 10%) 48%, hsl(220 20% 7%));
+    min-height: 100vh;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.32);
+    color: hsl(var(--foreground));
+  }
+}
+
+@layer components {
+  .executive-panel {
+    @apply border border-border/80 bg-card/90 shadow-[0_18px_55px_hsl(220_24%_4%_/_0.28)] backdrop-blur;
+  }
+
+  .gold-surface {
+    background: linear-gradient(135deg, hsl(42 74% 58% / 0.18), hsl(42 45% 18% / 0.24));
   }
 }

@@ -10,13 +10,14 @@ import { formatDate, formatNumber } from "@/lib/utils";
 
 function MetricCard({ title, value, icon: Icon }: { title: string; value: string; icon: typeof Activity }) {
   return (
-    <Card>
-      <CardContent className="flex items-center justify-between p-5">
-        <div>
-          <p className="text-sm text-muted-foreground">{title}</p>
-          <p className="mt-2 text-2xl font-semibold">{value}</p>
+    <Card className="overflow-hidden">
+      <CardContent className="relative flex items-center justify-between p-5">
+        <div className="absolute inset-x-0 top-0 h-1 bg-primary/80" />
+        <div className="min-w-0">
+          <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">{title}</p>
+          <p className="mt-3 truncate text-3xl font-semibold text-foreground">{value}</p>
         </div>
-        <div className="flex h-11 w-11 items-center justify-center rounded-md bg-secondary text-secondary-foreground">
+        <div className="gold-surface flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-primary/25 text-primary">
           <Icon className="h-5 w-5" />
         </div>
       </CardContent>
@@ -46,6 +47,15 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <section className="executive-panel overflow-hidden rounded-lg p-6">
+        <div className="max-w-3xl">
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">ARDO Enterprise</p>
+          <h2 className="mt-2 text-3xl font-semibold">Executive Command Center</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Visao operacional baseada exclusivamente nos dados vivos retornados pela API local.
+          </p>
+        </div>
+      </section>
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard title="Executions" value={formatNumber(data.pipeline_executions)} icon={GitBranch} />
         <MetricCard title="Accounting Entries" value={formatNumber(data.accounting_entries)} icon={Database} />
@@ -76,7 +86,7 @@ export function DashboardPage() {
           <dl className="grid gap-3 text-sm md:grid-cols-3">
             <div>
               <dt className="text-muted-foreground">Execution ID</dt>
-              <dd className="font-medium">{data.latest_execution_id ?? latestExecution?.id ?? "No execution published"}</dd>
+              <dd className="font-medium">{data.latest_execution_id ?? latestExecution?.id ?? "Nenhum registro encontrado"}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Status</dt>
@@ -84,7 +94,7 @@ export function DashboardPage() {
             </div>
             <div>
               <dt className="text-muted-foreground">Workbook SHA256</dt>
-              <dd className="truncate font-mono text-xs">{latestOperationalRun?.workbookSha256 ?? "Not captured in API history"}</dd>
+              <dd className="truncate font-mono text-xs">{latestOperationalRun?.workbookSha256 ?? "Nenhum registro encontrado"}</dd>
             </div>
           </dl>
         </CardContent>

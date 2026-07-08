@@ -2,8 +2,8 @@ import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Kpis } from "@/lib/types";
 
-const statusColors = ["#0f766e", "#b91c1c"];
-const barColors = ["#0369a1", "#0f766e", "#a16207", "#7c3aed"];
+const statusColors = ["#d6a93a", "#e35d5b"];
+const barColors = ["#d6a93a", "#7e8f78", "#b98545", "#c9c1ad"];
 
 export function PipelineStatusChart({ kpis }: { kpis: Kpis }) {
   const data = [
@@ -24,7 +24,7 @@ export function PipelineStatusChart({ kpis }: { kpis: Kpis }) {
                 <Cell key={index} fill={statusColors[index]} />
               ))}
             </Pie>
-            <Tooltip />
+            <Tooltip contentStyle={{ background: "#171a20", border: "1px solid #5f5234", color: "#f0eadc" }} />
           </PieChart>
         </ResponsiveContainer>
       </CardContent>
@@ -41,10 +41,10 @@ export function ArtifactBarChart({ values }: { values: Array<{ name: string; val
       <CardContent className="h-72">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={values} margin={{ top: 8, right: 8, left: 0, bottom: 16 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={12} />
-            <YAxis tickLine={false} axisLine={false} fontSize={12} />
-            <Tooltip />
+            <CartesianGrid stroke="#3f3a2f" strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={12} stroke="#b5aa95" />
+            <YAxis tickLine={false} axisLine={false} fontSize={12} stroke="#b5aa95" />
+            <Tooltip contentStyle={{ background: "#171a20", border: "1px solid #5f5234", color: "#f0eadc" }} />
             <Bar dataKey="value" radius={[4, 4, 0, 0]}>
               {values.map((_, index) => (
                 <Cell key={index} fill={barColors[index % barColors.length]} />

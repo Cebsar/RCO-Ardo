@@ -38,7 +38,7 @@ const columns: ColumnDef<HistoryRow>[] = [
   {
     accessorKey: "status",
     header: "Status",
-    cell: ({ row }) => <Badge className="bg-secondary text-secondary-foreground">{row.original.status}</Badge>,
+    cell: ({ row }) => <Badge>{row.original.status}</Badge>,
   },
 ];
 
@@ -88,7 +88,7 @@ export function PipelinePage() {
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(360px,0.6fr)]">
       <section>
         {rows.length === 0 ? (
-          <EmptyState title="No execution history" message="Run the accounting pipeline from Home to start building operational history." />
+          <EmptyState message="Execute o pipeline contabil para iniciar o historico operacional." />
         ) : (
           <DataTable columns={columns} data={rows} onRowClick={(row) => setSelectedId(row.id)} />
         )}
@@ -98,7 +98,7 @@ export function PipelinePage() {
           <CardTitle>Execution Detail</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
-          {!selectedId ? <p className="text-muted-foreground">Select an execution to inspect operational counts.</p> : null}
+          {!selectedId ? <p className="text-muted-foreground">Selecione uma execucao para inspecionar os totais operacionais.</p> : null}
           {detail.isLoading ? <p className="text-muted-foreground">Loading execution...</p> : null}
           {selectedRow ? (
             <>

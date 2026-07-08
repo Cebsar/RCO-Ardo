@@ -49,7 +49,7 @@ export function DrePage() {
         </CardContent>
       </Card>
       {nodes.length === 0 ? (
-        <EmptyState title="No DRE data" message="No DRE nodes were returned for the selected filters." />
+        <EmptyState message="Nenhum no de DRE foi retornado para os filtros selecionados." />
       ) : (
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">
           <DataTable columns={columns} data={nodes} />
@@ -60,11 +60,11 @@ export function DrePage() {
             <CardContent className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={nodes.slice(0, 12).map((node) => ({ name: node.node_code, amount: Number(node.amount ?? 0) }))}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="amount" fill="#0369a1" radius={[4, 4, 0, 0]} />
+                  <CartesianGrid stroke="#3f3a2f" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" stroke="#b5aa95" />
+                  <YAxis stroke="#b5aa95" />
+                  <Tooltip contentStyle={{ background: "#171a20", border: "1px solid #5f5234", color: "#f0eadc" }} />
+                  <Bar dataKey="amount" fill="#d6a93a" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
